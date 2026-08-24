@@ -268,15 +268,6 @@
       z-index: 1;
       filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2));
     }
-    /* La lamina se muestra a su proporcion real: entera, sin recorte y sin
-       nada detras, sea 16:9 o 4:3. Como todas las laminas del mismo deck
-       comparten proporcion, las tarjetas quedan parejas igual. */
-    .card-img-full {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
     .card-pais-imagen .bandera-grande {
       position: relative;
       z-index: 1;
@@ -288,8 +279,15 @@
     }
 
     .card-pais-body {
-      padding: 20px;
+      padding: 18px 16px 20px;
       text-align: center;
+    }
+    .card-pais-iniciativa {
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--bbva-gray);
+      font-weight: 500;
     }
     .card-pais-nombre {
       display: flex;
@@ -969,21 +967,23 @@
 // =============================================
 // DATOS DE PAISES (banderas y colores)
 // =============================================
+// iniciativa: titulo que se muestra en la tarjeta. PROVISORIO: reemplazar por
+// el titulo real de cada pais cuando esten definidos.
 // iso: codigo ISO-3166 alpha-2 para la bandera. Windows/Chrome no dibuja los
 // emoji de bandera (muestra las letras), asi que la bandera va como imagen y
 // el emoji queda solo de respaldo para las unidades sin pais (CIB, Holding).
 var PAISES_INFO = {
-  'Argentina':  { iso: 'ar',  emoji: '🇦🇷', color1: '#75AADB', color2: '#FCBF49' },
-  'Chile':      { iso: 'cl',  emoji: '🇨🇱', color1: '#D52B1E', color2: '#0039A6' },
-  'CIB':        { iso: null,  emoji: '🏦',              color1: '#004481', color2: '#1973B8' },
-  'Colombia':   { iso: 'co',  emoji: '🇨🇴', color1: '#FCD116', color2: '#003893' },
-  'Espana':     { iso: 'es',  emoji: '🇪🇸', color1: '#AA151B', color2: '#F1BF00' },
-  'Holding':    { iso: null,  emoji: '🏢',              color1: '#072146', color2: '#2DCCCD' },
-  'Mexico':     { iso: 'mx',  emoji: '🇲🇽', color1: '#006847', color2: '#CE1126' },
-  'Peru':       { iso: 'pe',  emoji: '🇵🇪', color1: '#D91023', color2: '#FFFFFF' },
-  'Turquia':    { iso: 'tr',  emoji: '🇹🇷', color1: '#E30A17', color2: '#FFFFFF' },
-  'Uruguay':    { iso: 'uy',  emoji: '🇺🇾', color1: '#001489', color2: '#FCD116' },
-  'Venezuela':  { iso: 've',  emoji: '🇻🇪', color1: '#CF142B', color2: '#00247D' }
+  'Argentina': { iso: 'ar',  emoji: '🇦🇷', color1: '#75AADB', color2: '#FCBF49', iniciativa: 'Iniciativa pendiente de definir' },
+  'Chile':     { iso: 'cl',  emoji: '🇨🇱', color1: '#D52B1E', color2: '#0039A6', iniciativa: 'Iniciativa pendiente de definir' },
+  'CIB':       { iso: null,  emoji: '🏦', color1: '#004481', color2: '#1973B8', iniciativa: 'Iniciativa pendiente de definir' },
+  'Colombia':  { iso: 'co',  emoji: '🇨🇴', color1: '#FCD116', color2: '#003893', iniciativa: 'Iniciativa pendiente de definir' },
+  'Espana':    { iso: 'es',  emoji: '🇪🇸', color1: '#AA151B', color2: '#F1BF00', iniciativa: 'Iniciativa pendiente de definir' },
+  'Holding':   { iso: null,  emoji: '🏢', color1: '#072146', color2: '#2DCCCD', iniciativa: 'Iniciativa pendiente de definir' },
+  'Mexico':    { iso: 'mx',  emoji: '🇲🇽', color1: '#006847', color2: '#CE1126', iniciativa: 'Iniciativa pendiente de definir' },
+  'Peru':      { iso: 'pe',  emoji: '🇵🇪', color1: '#D91023', color2: '#FFFFFF', iniciativa: 'Iniciativa pendiente de definir' },
+  'Turquia':   { iso: 'tr',  emoji: '🇹🇷', color1: '#E30A17', color2: '#FFFFFF', iniciativa: 'Iniciativa pendiente de definir' },
+  'Uruguay':   { iso: 'uy',  emoji: '🇺🇾', color1: '#001489', color2: '#FCD116', iniciativa: 'Iniciativa pendiente de definir' },
+  'Venezuela': { iso: 've',  emoji: '🇻🇪', color1: '#CF142B', color2: '#00247D', iniciativa: 'Iniciativa pendiente de definir' }
 };
 
 // Debe coincidir con CATEGORIAS en Code.gs. Se replica del lado del cliente
@@ -1010,7 +1010,6 @@ function banderaHtml(pais, clase) {
 
 // Incrustados por doGet: llegan con la pagina, no cuestan una llamada aparte
 // y ya estan disponibles antes de dibujar cualquier tarjeta.
-var IMAGENES_INICIALES = <?!= imagenesJson ?>;
 var EMAIL_INICIAL = <?!= emailJson ?>;
 
 // =============================================
@@ -1023,7 +1022,6 @@ var estado = {
   emailAutoDetectado: false,
   adminPassword: '',
   refreshInterval: null,
-  imagenes: IMAGENES_INICIALES || {},
   seleccion: {},
   categoriasVotables: []
 };
@@ -1175,17 +1173,14 @@ function crearCardPais(pais, categoriaId) {
   card.setAttribute('data-categoria', categoriaId);
   card.onclick = function() { seleccionarPais(this); };
 
-  var imgUrl = estado.imagenes[pais];
-  var medio = imgUrl
-    ? '<img class="card-img-full" src="' + escHtml(imgUrl) + '" alt="' + escHtml(pais) +
-      '" loading="lazy" decoding="async">'
-    : '<div class="card-pais-imagen" style="background: linear-gradient(135deg, ' +
-        info.color1 + ', ' + info.color2 + ');">' + banderaHtml(pais, 'bandera-grande') + '</div>';
-
   card.innerHTML =
-    medio +
+    '<div class="card-pais-imagen" style="background: linear-gradient(135deg, ' +
+      info.color1 + ', ' + info.color2 + ');">' +
+      banderaHtml(pais, 'bandera-grande') +
+    '</div>' +
     '<div class="card-pais-body">' +
-      '<div class="card-pais-nombre">' + banderaHtml(pais, 'bandera') + escHtml(pais) + '</div>' +
+      '<div class="card-pais-nombre">' + escHtml(pais) + '</div>' +
+      '<div class="card-pais-iniciativa">' + escHtml(info.iniciativa || '') + '</div>' +
     '</div>';
 
   return card;
@@ -1402,10 +1397,24 @@ function cargarAcceso() {
 }
 
 function cargarDashboard() {
+  var aviso = document.getElementById('lastUpdate');
+
   google.script.run
     .withSuccessHandler(function(res) {
-      if (!res.ok) return;
+      // Antes cualquiera de estos dos casos no mostraba nada y parecia que el
+      // panel simplemente no cargaba.
+      if (!res) {
+        aviso.textContent = 'Sin respuesta del servidor.';
+        return;
+      }
+      if (!res.ok) {
+        aviso.textContent = 'La contrasena no es valida para leer resultados.';
+        return;
+      }
       renderizarDashboard(res);
+    })
+    .withFailureHandler(function(err) {
+      aviso.textContent = 'No se pudo cargar: ' + (err && err.message ? err.message : 'error de conexion');
     })
     .obtenerResultadosAdmin(estado.adminPassword);
 }

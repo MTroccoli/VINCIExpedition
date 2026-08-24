@@ -11,7 +11,7 @@ datos. No hay build ni dependencias: los archivos se copian tal cual al proyecto
 
 | Archivo | Qué es |
 |---|---|
-| `Code.gs` | Todo el backend: votación, resultados, admin, exportación de imágenes |
+| `Code.gs` | Todo el backend: votación, resultados y administración |
 | `Index.html` | La aplicación completa — markup, estilos y lógica de cliente |
 | `appsscript.json` | Manifiesto: scopes y configuración del despliegue |
 | `LoadTest.gs` | Pruebas de carga. **No es parte del sistema — borrar antes del evento** |
@@ -35,6 +35,10 @@ duplicada a propósito para que el cliente arme la pantalla sin una llamada más
 al servidor. El backend valida siempre, así que la copia del cliente no puede
 habilitar un voto inválido.
 
+Cada tarjeta muestra la bandera, el nombre del país y el título de su
+iniciativa. Los títulos viven en `PAISES_INFO` (`Index.html`), campo
+`iniciativa`, y **hoy son un texto provisorio**.
+
 Nadie puede votar por su propio país. Si eso deja una categoría sin opciones,
 no se le exige elegir ahí.
 
@@ -46,7 +50,6 @@ La planilla se resuelve por la propiedad `SS_ID` en las Propiedades del script.
 |---|---|
 | `Votos` | `Timestamp · Email · PaisVotante · EsPonderado · una columna por categoría` |
 | `Lista Ponderada` | `Email · Nombre · Pais · Cargo` — sólo se usa la columna Email |
-| `Imagenes` | `Pais · ImagenURL`, generada por `exportarImagenesSlides()` |
 
 Los tres votos de una persona van en **una sola fila**. Es lo que mantiene el
 registro de un voto en una única escritura, que es de lo que depende el ritmo
@@ -61,50 +64,31 @@ de votantes. Por eso los scores no son comparables entre categorías.
 El peso es del *bloque*, no de cada persona: cuantos más votantes ponderados
 haya, menos pesa cada uno.
 
-### Imágenes desde Slides
-
-`exportarImagenesSlides()` exporta cada lámina de la presentación como PNG a una
-carpeta de Drive y guarda el mapeo en la hoja `Imagenes`.
-
-> **El mapeo es posicional.** La lámina `i` corresponde a `PAISES[i]`. Los países
-> sin categoría se saltean pero **siguen ocupando su índice**, así que el orden
-> de la presentación tiene que seguir siendo exactamente el de `PAISES`. Si se
-> borra una lámina del medio, todo lo que sigue se corre un lugar.
-
-Después de exportar, conviene revisar la hoja `Imagenes` y confirmar que cada
-país tiene la lámina que le corresponde.
-
 ## Puesta en marcha
 
 1. Crear el proyecto en [script.google.com](https://script.google.com) y copiar
    `Code.gs`, `Index.html` y `appsscript.json` (activar "Mostrar appsscript.json"
    en Configuración del proyecto).
-2. Agregar la API de Slides: **Servicios (+) → Google Slides API**.
-3. Poner el ID de la presentación en `CONFIG.SLIDES_ID`.
-4. Ejecutar `inicializarSistema()` una vez. Loguea la URL de la planilla.
-5. Ejecutar `limpiarImagenes()` y después `exportarImagenesSlides()`.
-6. Revisar la hoja `Imagenes`.
-7. Cargar la hoja `Lista Ponderada` y **borrar la fila de ejemplo**.
-8. Ejecutar `refrescarCaches()`.
-9. **Implementar → Nueva implementación → Aplicación web**, ejecutar como el
+2. Ejecutar `inicializarSistema()` una vez. Loguea la URL de la planilla.
+3. Cargar la hoja `Lista Ponderada` y **borrar la fila de ejemplo**.
+4. Ejecutar `refrescarCaches()`.
+5. **Implementar → Nueva implementación → Aplicación web**, ejecutar como el
    propietario, acceso: el dominio.
-10. Abrir el panel admin → pestaña **Acceso / QR** para el código QR.
+6. Abrir el panel admin → pestaña **Acceso / QR** para el código QR.
 
 ## Funciones del editor
 
 | Función | Para qué |
 |---|---|
 | `inicializarSistema()` | Crea las hojas. Una sola vez |
-| `limpiarImagenes()` | Vacía la carpeta de Drive y la hoja `Imagenes` |
-| `exportarImagenesSlides()` | Exporta las láminas y arma el mapeo país → imagen |
 | `refrescarCaches()` | Vacía todos los cachés |
 | `simularVotos(n)` | Prueba de carga (`LoadTest.gs`) |
 | `limpiarVotosDePrueba()` | Borra las filas que dejó la prueba |
 
 `refrescarCaches()` hay que correrlo **después de editar a mano** `Lista
-Ponderada` o `Imagenes`: si no, los cambios tardan hasta 25 minutos en verse.
-Es el paso que más fácil se olvida, y su síntoma —gente ponderada contando como
-regular— no es evidente.
+Ponderada`: si no, los cambios tardan hasta 25 minutos en verse. Es el paso que
+más fácil se olvida, y su síntoma —gente ponderada contando como regular— no es
+evidente.
 
 ## Rendimiento
 
@@ -117,8 +101,10 @@ El sistema está afinado para un pico de gente votando a la vez:
   cuelen dos filas.
 - Un voto exitoso **suma su email al caché** en vez de invalidarlo: invalidar
   obligaría al siguiente votante a releer la hoja entera.
-- La lista de ponderados y el mapeo de imágenes están cacheados; sin eso se
-  leían en cada validación, cada voto y cada carga de página.
+- La lista de ponderados está cacheada; sin eso se leía en cada validación y
+  en cada voto.
+- El email detectado se incrusta en la página desde `doGet`: una visita cuesta
+  **una** ejecución de Apps Script en vez de varias.
 
 Medir antes de asumir: `simularVotos(100)` reporta latencia p50/p95/max y votos
 por segundo. Como el lock serializa, el throughput del sistema es 1 dividido la
@@ -132,8 +118,6 @@ En `CONFIG` (`Code.gs`):
 |---|---|
 | `ADMIN_PASSWORD` | Acceso al panel de administración |
 | `PESO_PONDERADO` / `PESO_REGULAR` | Reparto 80/20 |
-| `SLIDES_ID` | Presentación de la que salen las imágenes |
-| `CARPETA_IMAGENES` | Carpeta de Drive donde se exportan los PNG |
 | `CACHE_*` | TTL de cada caché, en segundos |
 
 > La contraseña del panel está en el código. Si este repositorio deja de ser

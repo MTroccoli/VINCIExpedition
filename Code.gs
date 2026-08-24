@@ -32,17 +32,14 @@ const CONFIG = {
   PESO_REGULAR: 0.20,
   CACHE_EMAILS_VOTARON: 300,
   CACHE_RESULTADOS: 15,
-  CACHE_PONDERADOS: 1500,
-  CACHE_IMAGENES: 1500,
-  SLIDES_ID: '1Mkj7SD3SOSkDjyAjGjIIJob-TqvHu9rrrAAjsBvGNXI',
-  CARPETA_IMAGENES: 'VINCI Expedition - Imagenes'
+  CACHE_PONDERADOS: 1500
 };
 
 /**
  * Cada votante elige un pais por categoria. Un pais pertenece a una sola
  * categoria, y los que no figuran en ninguna no se votan: hoy Chile, Mexico
  * y Turquia. Para sumar un pais, agregalo a la lista de su categoria y volve
- * a correr limpiarImagenes() + exportarImagenesSlides().
+ * en la lista de su categoria.
  *
  * 'columna' es el encabezado que lleva su voto en la hoja Votos.
  */
@@ -107,8 +104,7 @@ function encabezadosVotos_() {
 
 const HOJAS = {
   VOTOS: 'Votos',
-  LISTA_PONDERADA: 'Lista Ponderada',
-  IMAGENES: 'Imagenes'
+  LISTA_PONDERADA: 'Lista Ponderada'
 };
 
 // =============================================
@@ -116,14 +112,9 @@ const HOJAS = {
 // =============================================
 
 function doGet() {
-  // El mapa de imagenes y el email van incrustados en la pagina. Antes cada
-  // visita hacia dos llamadas mas apenas cargaba; con mucha gente entrando
-  // junta eso triplicaba las ejecuciones por persona. De paso desaparece la
-  // carrera que dejaba las tarjetas sin imagen cuando la respuesta llegaba
-  // despues de que se dibujaba la grilla.
+  // El email va incrustado en la pagina en lugar de pedirse aparte: con mucha
+  // gente entrando junta, cada llamada que se evita es una ejecucion menos.
   var plantilla = HtmlService.createTemplateFromFile('Index');
-
-  plantilla.imagenesJson = JSON.stringify(obtenerImagenesPaises());
 
   var email = '';
   try {
@@ -282,12 +273,12 @@ function invalidarCachePonderados_() {
 
 /**
  * Vacia todos los caches. Correr desde el editor despues de editar a mano la
- * hoja "Lista Ponderada" o "Imagenes": si no, los cambios pueden tardar hasta
- * CACHE_PONDERADOS / CACHE_IMAGENES segundos en verse.
+ * hoja "Lista Ponderada": si no, los cambios pueden tardar hasta
+ * CACHE_PONDERADOS segundos en verse.
  */
 function refrescarCaches() {
   CacheService.getScriptCache().removeAll([
-    'emails_votaron', 'ponderados', 'imagenes', 'resultados'
+    'emails_votaron', 'ponderados', 'resultados'
   ]);
   Logger.log('Caches vaciados.');
   return { ok: true, msg: 'Caches vaciados.' };
@@ -633,220 +624,4 @@ function resetearVotos(password) {
   }
   invalidarCacheVotos_();
   return { ok: true };
-}
-
-// =============================================
-// IMAGENES DESDE GOOGLE SLIDES
-// =============================================
-
-function urlImagenDrive_(fileId) {
-  return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
-}
-
-function obtenerCarpetaImagenes_(crear) {
-  var folders = DriveApp.getFoldersByName(CONFIG.CARPETA_IMAGENES);
-  if (folders.hasNext()) return folders.next();
-  return crear ? DriveApp.createFolder(CONFIG.CARPETA_IMAGENES) : null;
-}
-
-/**
- * Borra todo lo exportado: manda a papelera los PNG de la carpeta
- * y vacia la hoja "Imagenes". Correr antes de reexportar cuando
- * cambio el orden o la cantidad de slides.
- */
-function limpiarImagenes() {
-  var borrados = 0;
-  var folder = obtenerCarpetaImagenes_(false);
-  if (folder) {
-    var files = folder.getFiles();
-    while (files.hasNext()) {
-      files.next().setTrashed(true);
-      borrados++;
-    }
-  }
-
-  var sheet = obtenerHoja_().getSheetByName(HOJAS.IMAGENES);
-  if (sheet) {
-    sheet.clear();
-    sheet.appendRow(['Pais', 'ImagenURL']);
-    sheet.getRange('A1:B1').setFontWeight('bold');
-  }
-
-  invalidarCacheImagenes_();
-
-  var msg = 'Limpieza lista: ' + borrados + ' archivos a papelera y hoja "' +
-            HOJAS.IMAGENES + '" vaciada.';
-  Logger.log(msg);
-  return { ok: true, borrados: borrados, msg: msg };
-}
-
-/**
- * Ejecutar UNA VEZ (o cuando cambien las slides).
- * Exporta cada slide como PNG a una carpeta de Drive
- * y guarda el mapeo Pais -> URL en la hoja "Imagenes".
- *
- * PREREQUISITO: En el editor de Apps Script:
- *   1. Servicios (+) > Google Slides API > Agregar
- *   2. Esto habilita automaticamente la API en el Cloud Project
- *
- * Despues de ejecutar, revisar la hoja "Imagenes" y
- * corregir el mapeo si el orden de slides no coincide con PAISES.
- */
-function exportarImagenesSlides() {
-  var presId = CONFIG.SLIDES_ID;
-  if (!presId) {
-    return { ok: false, msg: 'Configura SLIDES_ID en CONFIG.' };
-  }
-
-  var token = ScriptApp.getOAuthToken();
-
-  var presUrl = 'https://slides.googleapis.com/v1/presentations/' + presId;
-  var presResp = UrlFetchApp.fetch(presUrl, {
-    headers: { 'Authorization': 'Bearer ' + token },
-    muteHttpExceptions: true
-  });
-
-  if (presResp.getResponseCode() !== 200) {
-    var errorMsg = presResp.getContentText();
-    Logger.log('Error accediendo a la presentacion: ' + errorMsg);
-    if (errorMsg.indexOf('not enabled') !== -1 || errorMsg.indexOf('accessNotConfigured') !== -1) {
-      return { ok: false, msg: 'La API de Slides no esta habilitada. En el editor de Apps Script: Servicios (+) > Google Slides API > Agregar.' };
-    }
-    return { ok: false, msg: 'No se pudo acceder a la presentacion. Verifica el ID y permisos. Codigo: ' + presResp.getResponseCode() };
-  }
-
-  var presData = JSON.parse(presResp.getContentText());
-  var slides = presData.slides;
-  if (!slides || slides.length === 0) {
-    return { ok: false, msg: 'La presentacion no tiene slides.' };
-  }
-
-  var folder = obtenerCarpetaImagenes_(true);
-
-  try {
-    folder.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
-  } catch(e) {
-    Logger.log('Compartir carpeta automaticamente no disponible: ' + e.message);
-  }
-
-  var ss = obtenerHoja_();
-  var sheet = ss.getSheetByName(HOJAS.IMAGENES);
-  if (!sheet) {
-    sheet = ss.insertSheet(HOJAS.IMAGENES);
-  } else {
-    sheet.clear();
-  }
-  sheet.appendRow(['Pais', 'ImagenURL']);
-  sheet.getRange('A1:B1').setFontWeight('bold');
-
-  var total = 0;
-  var errores = [];
-
-  var omitidos = 0;
-
-  for (var i = 0; i < slides.length; i++) {
-    var pageId = slides[i].objectId;
-    var pais = i < PAISES.length ? PAISES[i] : 'Slide ' + (i + 1);
-
-    // El mapeo es posicional: el slide i corresponde a PAISES[i]. Los paises
-    // sin categoria se saltean pero siguen ocupando su indice, asi que el
-    // orden de la presentacion tiene que seguir siendo el de PAISES.
-    if (!paisEnVotacion_(pais)) {
-      omitidos++;
-      continue;
-    }
-
-    try {
-      var thumbUrl = 'https://slides.googleapis.com/v1/presentations/' + presId +
-                     '/pages/' + pageId + '/thumbnail?thumbnailProperties.thumbnailSize=MEDIUM';
-      var thumbResp = UrlFetchApp.fetch(thumbUrl, {
-        headers: { 'Authorization': 'Bearer ' + token },
-        muteHttpExceptions: true
-      });
-
-      if (thumbResp.getResponseCode() !== 200) {
-        errores.push('Slide ' + (i + 1) + ': HTTP ' + thumbResp.getResponseCode());
-        continue;
-      }
-
-      var thumbData = JSON.parse(thumbResp.getContentText());
-      var imageResp = UrlFetchApp.fetch(thumbData.contentUrl, { muteHttpExceptions: true });
-
-      if (imageResp.getResponseCode() !== 200) {
-        errores.push('Slide ' + (i + 1) + ': Error descargando imagen');
-        continue;
-      }
-
-      var fileName = 'slide_' + (i + 1) + '.png';
-      var imageBlob = imageResp.getBlob().setName(fileName);
-
-      var existing = folder.getFilesByName(fileName);
-      while (existing.hasNext()) existing.next().setTrashed(true);
-
-      var file = folder.createFile(imageBlob);
-
-      try {
-        file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch(e) {}
-
-      // El endpoint /thumbnail sirve la imagen ya redimensionada desde la CDN.
-      // El viejo /uc?export=view devuelve una pagina intermedia, y dentro de
-      // un <img> eso no se ve: la tarjeta quedaba en blanco.
-      sheet.appendRow([pais, urlImagenDrive_(file.getId())]);
-      total++;
-
-    } catch(e) {
-      errores.push('Slide ' + (i + 1) + ': ' + e.message);
-    }
-  }
-
-  invalidarCacheImagenes_();
-
-  var msg = 'Exportadas ' + total + ' de ' + slides.length + ' imagenes.';
-  if (omitidos > 0) {
-    msg += ' Omitidas ' + omitidos + ' (paises sin categoria).';
-  }
-  if (errores.length > 0) {
-    msg += ' Errores: ' + errores.join('; ');
-    Logger.log('Errores: ' + errores.join('; '));
-  }
-  msg += ' Revisa la hoja "Imagenes" y ajusta el mapeo Pais si es necesario.';
-
-  Logger.log(msg);
-  return { ok: total > 0, total: total, msg: msg };
-}
-
-// La llama cada visita al abrir la pagina, asi que va cacheada: si no, son
-// mil lecturas de la hoja para devolver siempre lo mismo.
-function obtenerImagenesPaises() {
-  var cache = CacheService.getScriptCache();
-  var cached = cache.get('imagenes');
-  if (cached) {
-    try { return JSON.parse(cached); } catch(e) {}
-  }
-
-  var mapping = {};
-  var sheet = obtenerHoja_().getSheetByName(HOJAS.IMAGENES);
-  if (sheet && sheet.getLastRow() > 1) {
-    sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues().forEach(function(row) {
-      if (row[0] && row[1]) mapping[row[0]] = normalizarUrlImagen_(row[1].toString());
-    });
-  }
-
-  guardarEnCache_('imagenes', mapping, CONFIG.CACHE_IMAGENES);
-  return mapping;
-}
-
-/**
- * Reescribe las URLs viejas de Drive al formato que si se embebe. Asi una
- * hoja exportada antes de este cambio funciona sin volver a exportar.
- */
-function normalizarUrlImagen_(url) {
-  var m = url.match(/[?&]id=([^&]+)/);
-  if (m && url.indexOf('/uc?') !== -1) return urlImagenDrive_(m[1]);
-  return url;
-}
-
-function invalidarCacheImagenes_() {
-  CacheService.getScriptCache().remove('imagenes');
 }
