@@ -111,22 +111,46 @@ const HOJAS = {
 // PUNTO DE ENTRADA
 // =============================================
 
-function doGet() {
-  // El email va incrustado en la pagina en lugar de pedirse aparte: con mucha
-  // gente entrando junta, cada llamada que se evita es una ejecucion menos.
-  var plantilla = HtmlService.createTemplateFromFile('Index');
+/**
+ * Sirve dos paginas distintas desde el mismo despliegue:
+ *   /exec            -> Index, la del votante
+ *   /exec?admin=1    -> Admin, el panel
+ *
+ * Estan separadas para que el HTML del votante no cargue el panel entero,
+ * que es mas de la mitad del peso y que ningun votante va a abrir. Ojo: esto
+ * aligera la descarga, no el cupo de ejecuciones simultaneas de Apps Script,
+ * que se cuenta por usuario y lo comparten las dos paginas.
+ */
+function doGet(e) {
+  var params = (e && e.parameter) || {};
+  var esAdmin = params.admin === '1';
 
-  var email = '';
-  try {
-    var detectado = Session.getActiveUser().getEmail();
-    if (detectado && detectado.indexOf('@') !== -1) email = detectado;
-  } catch(e) {}
-  plantilla.emailJson = JSON.stringify(email);
+  var plantilla = HtmlService.createTemplateFromFile(esAdmin ? 'Admin' : 'Index');
+
+  if (!esAdmin) {
+    // El email va incrustado en la pagina en lugar de pedirse aparte: con
+    // mucha gente entrando junta, cada llamada que se evita es una ejecucion
+    // menos. El panel no lo necesita.
+    var email = '';
+    try {
+      var detectado = Session.getActiveUser().getEmail();
+      if (detectado && detectado.indexOf('@') !== -1) email = detectado;
+    } catch(err) {}
+    plantilla.emailJson = JSON.stringify(email);
+  }
 
   return plantilla.evaluate()
-    .setTitle('VINCI Expedition')
+    .setTitle(esAdmin ? 'VINCI Expedition - Panel' : 'VINCI Expedition')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/**
+ * Inserta un archivo HTML dentro de otro. Lo usan Index y Admin para compartir
+ * Estilos y Comun sin duplicarlos.
+ */
+function incluir_(nombre) {
+  return HtmlService.createHtmlOutputFromFile(nombre).getContent();
 }
 
 // =============================================

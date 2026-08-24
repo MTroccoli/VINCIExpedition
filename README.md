@@ -12,9 +12,34 @@ datos. No hay build ni dependencias: los archivos se copian tal cual al proyecto
 | Archivo | Qué es |
 |---|---|
 | `Code.gs` | Todo el backend: votación, resultados y administración |
-| `Index.html` | La aplicación completa — markup, estilos y lógica de cliente |
+| `Index.html` | La página del votante |
+| `Admin.html` | El panel de administración |
+| `Estilos.html` | CSS compartido por ambas páginas |
+| `Comun.html` | JS compartido: datos de países, vistas, utilidades |
 | `appsscript.json` | Manifiesto: scopes y configuración del despliegue |
 | `LoadTest.gs` | Pruebas de carga. **No es parte del sistema — borrar antes del evento** |
+
+### Dos páginas
+
+`doGet` enruta por parámetro:
+
+| URL | Sirve |
+|---|---|
+| `/exec` | `Index.html` — el votante |
+| `/exec?admin=1` | `Admin.html` — el panel |
+
+Están separadas para que el HTML del votante no cargue el panel entero, que es
+más de la mitad del peso y que ningún votante va a abrir. **Aligera la descarga,
+no el cupo de ejecuciones simultáneas de Apps Script**: ese se cuenta por
+usuario y lo comparten las dos páginas. Lo que alivia la contención es hacer
+menos llamadas, no servir otro archivo.
+
+`Estilos.html` y `Comun.html` se insertan en ambas con `incluir_()`, así un
+cambio de color o de la lista de países se hace una sola vez.
+
+> `/exec` sirve una **versión congelada**: guardar cambios no la actualiza, hay
+> que crear una versión nueva al desplegar. `/dev` sirve siempre el último
+> código guardado, pero sólo la abren editores del proyecto.
 
 ## Cómo funciona
 
@@ -67,14 +92,15 @@ haya, menos pesa cada uno.
 ## Puesta en marcha
 
 1. Crear el proyecto en [script.google.com](https://script.google.com) y copiar
-   `Code.gs`, `Index.html` y `appsscript.json` (activar "Mostrar appsscript.json"
-   en Configuración del proyecto).
+   `Code.gs`, `Index.html`, `Admin.html`, `Estilos.html`, `Comun.html` y
+   `appsscript.json` (activar "Mostrar appsscript.json" en Configuración del
+   proyecto). Los cuatro HTML van como archivos HTML, con esos nombres exactos.
 2. Ejecutar `inicializarSistema()` una vez. Loguea la URL de la planilla.
 3. Cargar la hoja `Lista Ponderada` y **borrar la fila de ejemplo**.
 4. Ejecutar `refrescarCaches()`.
 5. **Implementar → Nueva implementación → Aplicación web**, ejecutar como el
    propietario, acceso: el dominio.
-6. Abrir el panel admin → pestaña **Acceso / QR** para el código QR.
+6. Abrir `/exec?admin=1` → pestaña **Acceso / QR** para el código QR.
 
 ## Funciones del editor
 
