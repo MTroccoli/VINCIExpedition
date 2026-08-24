@@ -273,6 +273,30 @@
     }
 
 
+    .acceso-card {
+      text-align: center;
+      padding: 24px 16px;
+    }
+    .acceso-qr {
+      display: block;
+      margin: 0 auto;
+      width: 240px;
+      max-width: 100%;
+      height: auto;
+      border: 8px solid #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(7,33,70,0.15);
+      background: #fff;
+    }
+    .acceso-url {
+      display: block;
+      margin: 16px auto 0;
+      max-width: 100%;
+      word-break: break-all;
+      font-size: 13px;
+      color: var(--bbva-blue);
+    }
+
     @media (max-width: 600px) {
       .acceso-qr { width: 220px; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -326,6 +350,7 @@
     <!-- TAB: Dashboard -->
     <div class="admin-section active" id="secDashboard">
       <div class="auto-refresh">
+        <button class="btn btn-secondary btn-sm" onclick="refrescarPanel()">Actualizar ahora</button>
         <label><input type="checkbox" id="chkAutoRefresh" checked onchange="toggleAutoRefresh()"> Auto-refrescar</label>
         <span class="last-update" id="lastUpdate"></span>
       </div>
@@ -511,9 +536,9 @@ function cargarAcceso() {
       };
       imagen.onload = function() {
         error.style.display = 'none';
-        imagen.style.display = 'inline-block';
+        imagen.style.display = 'block';
       };
-      imagen.src = 'https://api.qrserver.com/v1/create-qr-code/?size=560x560&margin=10&data=' +
+      imagen.src = 'https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=10&data=' +
                    encodeURIComponent(res.url);
     })
     .withFailureHandler(function() {
@@ -629,6 +654,15 @@ function renderizarDashboard(res) {
   }
 
   document.getElementById('lastUpdate').textContent = 'Actualizado: ' + new Date().toLocaleTimeString();
+}
+
+/**
+ * Recarga los datos del panel sin recargar la pagina, asi no se pierde la
+ * sesion y no hay que volver a escribir la contrasena.
+ */
+function refrescarPanel() {
+  cargarDashboard();
+  cargarListaPonderadaAdmin();
 }
 
 function toggleAutoRefresh() {

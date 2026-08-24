@@ -170,27 +170,6 @@
     }
     .modal-resumen li:last-child { border-bottom: none; }
 
-    .acceso-card {
-      text-align: center;
-      padding: 24px;
-    }
-    .acceso-qr {
-      width: 280px;
-      max-width: 100%;
-      height: auto;
-      border: 8px solid #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      background: #fff;
-    }
-    .acceso-url {
-      display: block;
-      margin: 16px auto 0;
-      max-width: 100%;
-      word-break: break-all;
-      font-size: 13px;
-      color: var(--bbva-blue);
-    }
 
     .votacion-footer {
       text-align: center;
@@ -364,7 +343,6 @@
 
     <button class="btn btn-primary btn-block" id="btnIngresar" onclick="ingresar()">Ingresar</button>
 
-    <span class="link-admin" onclick="irAlAdmin()">Panel de administracion</span>
   </div>
 </div>
 
@@ -651,10 +629,6 @@ function confirmarVoto() {
 }
 
 
-// El panel de administracion es otra pagina: no viaja en el HTML del votante.
-function irAlAdmin() {
-  window.open(window.location.pathname + '?admin=1', '_blank');
-}
 </script>
 
 </body>
