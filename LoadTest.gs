@@ -45,12 +45,12 @@ var LOADTEST = {
 /**
  * Vota n veces seguidas midiendo cada llamada.
  *
- * Que mide: cuanto tarda un voto de punta a punta en el servidor. Como el
- * ScriptLock serializa la escritura, el throughput maximo del sistema es
- * 1 / latencia, asi que este numero es el techo real de votos por segundo.
+ * Que mide: cuanto tarda un voto de punta a punta en el servidor.
  *
- * Que NO mide: la contencion del lock ni el cupo de ejecuciones simultaneas
- * de Apps Script. Para eso esta simularVotosConcurrentes.
+ * Que NO mide: el ritmo del sistema. La escritura pasa por la API de Sheets,
+ * que es atomica y no usa lock, asi que los votos NO hacen cola: el ritmo real
+ * es la latencia dividida por cuantas ejecuciones corren en paralelo. Para
+ * medir eso hay que usar simularVotosConcurrentes.
  */
 function simularVotos(n) {
   n = n || 100;
@@ -332,9 +332,15 @@ function formatearResumen_(r) {
     });
   }
 
-  lineas.push(r.votosPorSegundo >= 3.33
-    ? '  RESULTADO: entra en la ventana de 5 minutos.'
-    : '  RESULTADO: NO entra en 5 minutos a este ritmo.');
+  if (r.modo === 'secuencial') {
+    lineas.push('  NOTA: en secuencial no hay paralelismo, asi que votos/segundo');
+    lineas.push('        es solo 1/latencia. Sin lock, la concurrencia lo multiplica.');
+    lineas.push('        Para el ritmo real corre simularVotosConcurrentes.');
+  } else {
+    lineas.push(r.votosPorSegundo >= 3.33
+      ? '  RESULTADO: entra en la ventana de 5 minutos.'
+      : '  RESULTADO: NO entra en 5 minutos a este ritmo.');
+  }
 
   return lineas.join('\n');
 }

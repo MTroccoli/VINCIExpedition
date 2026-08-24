@@ -120,8 +120,12 @@ evidente.
 
 El sistema está afinado para un pico de gente votando a la vez:
 
-- El lock de escritura envuelve **sólo** el `appendRow`. La verificación de
-  duplicado y la lista de ponderados se resuelven fuera, contra caché.
+- El voto se escribe con la **API de Sheets**, cuyo `append` es atómico del
+  lado del servidor. Sin `LockService`, los votos no hacen cola: el ritmo deja
+  de ser 1/latencia y la concurrencia lo multiplica. Si la llamada falla, cae a
+  `appendRow` con lock.
+- El camino del voto **no abre la planilla**: para escribir por la API alcanza
+  el ID, y `openById` costaba cientos de milisegundos en cada voto.
 - Como esa verificación no es autoritativa, el conteo se queda con **la primera
   fila de cada email** y descarta duplicados. Nadie vota dos veces aunque se
   cuelen dos filas.
@@ -132,9 +136,10 @@ El sistema está afinado para un pico de gente votando a la vez:
 - El email detectado se incrusta en la página desde `doGet`: una visita cuesta
   **una** ejecución de Apps Script en vez de varias.
 
-Medir antes de asumir: `simularVotos(100)` reporta latencia p50/p95/max y votos
-por segundo. Como el lock serializa, el throughput del sistema es 1 dividido la
-latencia, así que ese número es el techo real.
+Medir antes de asumir. `simularVotos(100)` reporta la **latencia** de un voto;
+como es secuencial, sus votos por segundo son sólo 1/latencia y no representan
+el ritmo del sistema. Para el ritmo real hay que usar
+`simularVotosConcurrentes(n)`, que sí abre ejecuciones en paralelo.
 
 ## Configuración
 

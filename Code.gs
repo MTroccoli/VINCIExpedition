@@ -188,6 +188,28 @@ function inicializarSistema() {
 // UTILIDADES PRIVADAS
 // =============================================
 
+/**
+ * ID de la planilla, sin abrirla. Abrirla con openById cuesta cientos de
+ * milisegundos y en el camino del voto no hace falta: para escribir por la API
+ * de Sheets alcanza con el ID.
+ */
+function obtenerIdHoja_() {
+  var cache = CacheService.getScriptCache();
+  var id = cache.get('ss_id');
+  if (id) return id;
+
+  var props = PropertiesService.getScriptProperties();
+  id = props.getProperty('SS_ID');
+
+  if (!id) {
+    id = obtenerHoja_().getId();
+    props.setProperty('SS_ID', id);
+  }
+
+  cache.put('ss_id', id, 21600);
+  return id;
+}
+
 function obtenerHoja_() {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -201,6 +223,59 @@ function obtenerHoja_() {
   var ss = SpreadsheetApp.create('VINCI Expedition - Votacion');
   props.setProperty('SS_ID', ss.getId());
   return ss;
+}
+
+/**
+ * Agrega una fila a la hoja de votos con la API de Sheets.
+ *
+ * El append de la API es atomico del lado del servidor: dos pedidos
+ * simultaneos crean dos filas, ninguno pisa al otro. Por eso este camino no
+ * necesita LockService, y sin lock los votos dejan de hacer cola.
+ *
+ * Con el lock, el ritmo del sistema era 1 / latencia sin importar cuanta
+ * gente entrara a la vez. Sin el, la concurrencia multiplica.
+ *
+ * Si la llamada falla se cae a appendRow con lock, que es mas lento pero
+ * conocido.
+ */
+function agregarFilaVotos_(fila) {
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + obtenerIdHoja_() +
+            '/values/' + encodeURIComponent(HOJAS.VOTOS) + '!A1:append' +
+            '?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS';
+
+  try {
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() },
+      payload: JSON.stringify({ values: [fila] }),
+      muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() === 200) return { ok: true };
+    Logger.log('append via API fallo: ' + resp.getResponseCode() + ' ' + resp.getContentText());
+  } catch(e) {
+    Logger.log('append via API excepcion: ' + e.message);
+  }
+
+  return agregarFilaVotosRespaldo_(fila);
+}
+
+function agregarFilaVotosRespaldo_(fila) {
+  var sheet = obtenerHoja_().getSheetByName(HOJAS.VOTOS);
+  if (!sheet) {
+    return { ok: false, msg: 'No se encontro la hoja de votos. Ejecuta inicializarSistema().' };
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+    sheet.appendRow(fila);
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, msg: 'Hubo mucha demanda y no se pudo registrar. Reintenta en unos segundos.' };
+  } finally {
+    try { lock.releaseLock(); } catch(e) {}
+  }
 }
 
 function leerHoja_(nombre) {
@@ -454,26 +529,18 @@ function registrarVoto(email, votos, paisVotante) {
     };
   }
 
-  var sheet = obtenerHoja_().getSheetByName(HOJAS.VOTOS);
-  if (!sheet) {
-    return { ok: false, msg: 'Error de configuracion: no se encontro la hoja de votos. Ejecuta inicializarSistema().' };
-  }
-
   // La lista de ponderados esta cacheada, asi que esto no toca la hoja.
   var esPond = obtenerSetPonderados_().indexOf(email) !== -1;
-  var fila = [new Date(), email, paisVotante, esPond ? 'SI' : 'NO'];
+
+  // La fecha va como texto: el cuerpo del pedido es JSON y no admite un Date.
+  // Con USER_ENTERED, Sheets la vuelve a interpretar como fecha en la celda.
+  var ahora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+  var fila = [ahora, email, paisVotante, esPond ? 'SI' : 'NO'];
   CATEGORIAS.forEach(function(c) { fila.push(elegidos[c.id] || ''); });
 
-  // Unico tramo serializado: el append. Todo lo caro quedo afuera, asi que la
-  // seccion critica es un solo viaje a Sheets y la cola avanza rapido.
-  var lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(20000);
-    sheet.appendRow(fila);
-  } catch(e) {
-    return { ok: false, msg: 'Hubo mucha demanda y no se pudo registrar. Reintenta en unos segundos.' };
-  } finally {
-    try { lock.releaseLock(); } catch(e) {}
+  var escritura = agregarFilaVotos_(fila);
+  if (!escritura.ok) {
+    return { ok: false, msg: escritura.msg || 'No se pudo registrar el voto. Reintenta.' };
   }
 
   registrarEmailEnCache_(email);
