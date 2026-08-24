@@ -227,6 +227,65 @@ function doPost(e) {
 }
 
 // =============================================
+// DIAGNOSTICO
+// =============================================
+
+/**
+ * Escribe una fila de prueba directamente por la API de Sheets y cuenta que
+ * paso. Sirve para saber si el camino rapido funciona o si cada voto esta
+ * cayendo al respaldo con lock, que es lo que explicaria una latencia alta.
+ *
+ * Deja una fila con el prefijo de prueba: la borra limpiarVotosDePrueba().
+ */
+function probarEscrituraApi() {
+  var id = obtenerIdHoja_();
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + id +
+            '/values/' + encodeURIComponent(HOJAS.VOTOS) + '!A1:append' +
+            '?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS';
+
+  var fila = [
+    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
+    LOADTEST.PREFIJO + 'diag@' + LOADTEST.DOMINIO,
+    LOADTEST.PAIS_VOTANTE,
+    'NO'
+  ];
+  CATEGORIAS.forEach(function() { fila.push(''); });
+
+  var t0 = Date.now();
+  var codigo, cuerpo;
+  try {
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() },
+      payload: JSON.stringify({ values: [fila] }),
+      muteHttpExceptions: true
+    });
+    codigo = resp.getResponseCode();
+    cuerpo = resp.getContentText();
+  } catch(e) {
+    codigo = -1;
+    cuerpo = e.message;
+  }
+  var ms = Date.now() - t0;
+
+  var ok = codigo === 200;
+  var lineas = [
+    'DIAGNOSTICO DE ESCRITURA',
+    '  id de la planilla : ' + id,
+    '  codigo HTTP       : ' + codigo,
+    '  tardo             : ' + ms + ' ms',
+    ok ? '  La API de Sheets funciona: los votos NO usan el respaldo con lock.'
+       : '  La API de Sheets fallo: cada voto esta cayendo al respaldo con lock.',
+    '  respuesta         : ' + (cuerpo || '').slice(0, 500)
+  ];
+
+  var msg = lineas.join('\n');
+  Logger.log(msg);
+  return { ok: ok, codigo: codigo, ms: ms, msg: msg };
+}
+
+// =============================================
 // LIMPIEZA
 // =============================================
 
@@ -310,8 +369,10 @@ function armarResumen_(modo, n, ok, fallos, tiempos, totalMs, cortado) {
   var suma = 0;
   for (var i = 0; i < tiempos.length; i++) suma += tiempos[i];
 
+  // El ritmo se calcula con los votos que entraron, no con los intentos: si
+  // fallan todos, el numero mide la velocidad del rechazo y no dice nada.
   var segundos = totalMs / 1000;
-  var porSegundo = segundos > 0 ? n / segundos : 0;
+  var porSegundo = segundos > 0 ? ok / segundos : 0;
 
   return {
     modo: modo,
@@ -355,7 +416,13 @@ function formatearResumen_(r) {
     });
   }
 
-  if (r.modo === 'secuencial') {
+  if (r.fallidos > 0 && r.ok === 0) {
+    lineas.push('  RESULTADO: sin valor. No entro ningun voto, asi que los tiempos');
+    lineas.push('             miden el error y no la escritura. Revisa los fallos.');
+  } else if (r.fallidos > 0) {
+    lineas.push('  RESULTADO: parcial. Fallaron ' + r.fallidos + ' votos, el ritmo de');
+    lineas.push('             abajo solo cuenta los que entraron. Revisa los fallos.');
+  } else if (r.modo === 'secuencial') {
     lineas.push('  NOTA: en secuencial no hay paralelismo, asi que votos/segundo');
     lineas.push('        es solo 1/latencia. Sin lock, la concurrencia lo multiplica.');
     lineas.push('        Para el ritmo real corre simularVotosConcurrentes.');
