@@ -1,0 +1,30 @@
+# Configuracion local de clasp: apunta al proyecto de Apps Script de cada
+# maquina. No es secreto, pero es especifico del entorno.
+.clasp.json
+.clasprc.json
+
+# Credenciales y variables de entorno
+.env
+.env.*
+*.pem
+*.key
+
+# Dependencias, por si en algun momento se suma clasp via npm
+node_modules/
+package-lock.json
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Salidas temporales
+*.log
+tmp/
+scratch/
