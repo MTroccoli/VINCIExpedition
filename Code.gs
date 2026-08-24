@@ -116,7 +116,23 @@ const HOJAS = {
 // =============================================
 
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
+  // El mapa de imagenes y el email van incrustados en la pagina. Antes cada
+  // visita hacia dos llamadas mas apenas cargaba; con mucha gente entrando
+  // junta eso triplicaba las ejecuciones por persona. De paso desaparece la
+  // carrera que dejaba las tarjetas sin imagen cuando la respuesta llegaba
+  // despues de que se dibujaba la grilla.
+  var plantilla = HtmlService.createTemplateFromFile('Index');
+
+  plantilla.imagenesJson = JSON.stringify(obtenerImagenesPaises());
+
+  var email = '';
+  try {
+    var detectado = Session.getActiveUser().getEmail();
+    if (detectado && detectado.indexOf('@') !== -1) email = detectado;
+  } catch(e) {}
+  plantilla.emailJson = JSON.stringify(email);
+
+  return plantilla.evaluate()
     .setTitle('VINCI Expedition')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -290,21 +306,6 @@ function invalidarCacheResultados_() {
 // API PUBLICA - DETECCION DE EMAIL
 // =============================================
 
-/**
- * Email de quien esta usando el web app. Funciona porque el despliegue es
- * de dominio: la persona ya viene logueada con su cuenta BBVA. Si por lo que
- * sea no se puede leer, el front cae al campo de email escrito a mano.
- */
-function obtenerEmailUsuario() {
-  try {
-    var email = Session.getActiveUser().getEmail();
-    if (email && email.indexOf('@') !== -1) {
-      return { ok: true, email: email };
-    }
-  } catch(e) {}
-  return { ok: false, email: '' };
-}
-
 // =============================================
 // API PUBLICA - REGISTRO
 // =============================================
@@ -461,7 +462,9 @@ function registrarVoto(email, votos, paisVotante) {
   }
 
   registrarEmailEnCache_(email);
-  invalidarCacheResultados_();
+  // No se invalida el cache de resultados: su TTL ya acota cuanto puede
+  // atrasarse, y borrarlo en cada voto obliga al dashboard a releer la hoja
+  // entera en cada refresco, justo cuando hay mas cola de ejecuciones.
 
   return {
     ok: true,
@@ -636,6 +639,10 @@ function resetearVotos(password) {
 // IMAGENES DESDE GOOGLE SLIDES
 // =============================================
 
+function urlImagenDrive_(fileId) {
+  return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
+}
+
 function obtenerCarpetaImagenes_(crear) {
   var folders = DriveApp.getFoldersByName(CONFIG.CARPETA_IMAGENES);
   if (folders.hasNext()) return folders.next();
@@ -782,7 +789,10 @@ function exportarImagenesSlides() {
         file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
       } catch(e) {}
 
-      sheet.appendRow([pais, 'https://drive.google.com/uc?export=view&id=' + file.getId()]);
+      // El endpoint /thumbnail sirve la imagen ya redimensionada desde la CDN.
+      // El viejo /uc?export=view devuelve una pagina intermedia, y dentro de
+      // un <img> eso no se ve: la tarjeta quedaba en blanco.
+      sheet.appendRow([pais, urlImagenDrive_(file.getId())]);
       total++;
 
     } catch(e) {
@@ -819,12 +829,22 @@ function obtenerImagenesPaises() {
   var sheet = obtenerHoja_().getSheetByName(HOJAS.IMAGENES);
   if (sheet && sheet.getLastRow() > 1) {
     sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues().forEach(function(row) {
-      if (row[0] && row[1]) mapping[row[0]] = row[1];
+      if (row[0] && row[1]) mapping[row[0]] = normalizarUrlImagen_(row[1].toString());
     });
   }
 
   guardarEnCache_('imagenes', mapping, CONFIG.CACHE_IMAGENES);
   return mapping;
+}
+
+/**
+ * Reescribe las URLs viejas de Drive al formato que si se embebe. Asi una
+ * hoja exportada antes de este cambio funciona sin volver a exportar.
+ */
+function normalizarUrlImagen_(url) {
+  var m = url.match(/[?&]id=([^&]+)/);
+  if (m && url.indexOf('/uc?') !== -1) return urlImagenDrive_(m[1]);
+  return url;
 }
 
 function invalidarCacheImagenes_() {

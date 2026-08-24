@@ -1008,6 +1008,11 @@ function banderaHtml(pais, clase) {
          'alt="' + escHtml(pais) + '" loading="lazy" onerror="this.remove()">';
 }
 
+// Incrustados por doGet: llegan con la pagina, no cuestan una llamada aparte
+// y ya estan disponibles antes de dibujar cualquier tarjeta.
+var IMAGENES_INICIALES = <?!= imagenesJson ?>;
+var EMAIL_INICIAL = <?!= emailJson ?>;
+
 // =============================================
 // ESTADO GLOBAL
 // =============================================
@@ -1018,7 +1023,7 @@ var estado = {
   emailAutoDetectado: false,
   adminPassword: '',
   refreshInterval: null,
-  imagenes: {},
+  imagenes: IMAGENES_INICIALES || {},
   seleccion: {},
   categoriasVotables: []
 };
@@ -1074,25 +1079,13 @@ function escHtml(str) {
     selPond.appendChild(opt);
   });
 
-  google.script.run
-    .withSuccessHandler(function(res) {
-      if (res.ok && res.email) {
-        estado.email = res.email;
-        estado.emailAutoDetectado = true;
-        document.getElementById('grupoEmail').style.display = 'none';
-        document.getElementById('grupoEmailAuto').style.display = 'block';
-        document.getElementById('emailAutoDetectado').textContent = res.email;
-      }
-    })
-    .withFailureHandler(function() {})
-    .obtenerEmailUsuario();
-
-  google.script.run
-    .withSuccessHandler(function(mapping) {
-      estado.imagenes = mapping || {};
-    })
-    .withFailureHandler(function() {})
-    .obtenerImagenesPaises();
+  if (EMAIL_INICIAL) {
+    estado.email = EMAIL_INICIAL;
+    estado.emailAutoDetectado = true;
+    document.getElementById('grupoEmail').style.display = 'none';
+    document.getElementById('grupoEmailAuto').style.display = 'block';
+    document.getElementById('emailAutoDetectado').textContent = EMAIL_INICIAL;
+  }
 })();
 
 // =============================================
@@ -1184,7 +1177,8 @@ function crearCardPais(pais, categoriaId) {
 
   var imgUrl = estado.imagenes[pais];
   var medio = imgUrl
-    ? '<img class="card-img-full" src="' + escHtml(imgUrl) + '" alt="' + escHtml(pais) + '" loading="lazy">'
+    ? '<img class="card-img-full" src="' + escHtml(imgUrl) + '" alt="' + escHtml(pais) +
+      '" loading="lazy" decoding="async">'
     : '<div class="card-pais-imagen" style="background: linear-gradient(135deg, ' +
         info.color1 + ', ' + info.color2 + ');">' + banderaHtml(pais, 'bandera-grande') + '</div>';
 
@@ -1519,7 +1513,7 @@ function iniciarAutoRefresh() {
     if (document.getElementById('vistaAdmin').classList.contains('active')) {
       cargarDashboard();
     }
-  }, 15000);
+  }, 30000);
 }
 
 // Admin: Lista ponderada
