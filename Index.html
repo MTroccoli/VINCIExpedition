@@ -247,7 +247,7 @@
 
     .card-pais-imagen {
       width: 100%;
-      height: 180px;
+      aspect-ratio: 16 / 9;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -270,7 +270,7 @@
       top: 0; left: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       z-index: 1;
     }
 
@@ -744,7 +744,7 @@
       .header-logo { font-size: 22px; }
       .registro-card, .admin-login, .confirmacion-card { margin: 24px 12px; padding: 28px 20px; }
       .grid-paises { grid-template-columns: 1fr 1fr; gap: 12px; }
-      .card-pais-imagen { height: 120px; font-size: 48px; }
+      .card-pais-imagen { font-size: 48px; }
       .card-pais-nombre { font-size: 16px; }
       .card-pais-body { padding: 12px; }
       .container { padding: 20px 12px; }
@@ -1177,8 +1177,12 @@ function crearCardPais(pais, categoriaId) {
     ? '<img class="card-img" src="' + escHtml(imgUrl) + '" alt="' + escHtml(pais) + '" loading="lazy">'
     : banderaHtml(pais, 'bandera-grande');
 
+  var fondo = imgUrl
+    ? ''
+    : ' style="background: linear-gradient(135deg, ' + info.color1 + ', ' + info.color2 + ');"';
+
   card.innerHTML =
-    '<div class="card-pais-imagen" style="background: linear-gradient(135deg, ' + info.color1 + ', ' + info.color2 + ');">' +
+    '<div class="card-pais-imagen"' + fondo + '>' +
       imagenHtml +
     '</div>' +
     '<div class="card-pais-body">' +
