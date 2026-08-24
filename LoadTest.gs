@@ -32,9 +32,10 @@ var LOADTEST = {
   // Corta la corrida antes del limite de 6 minutos de Apps Script.
   MAX_MS: 4 * 60 * 1000,
 
-  // Solo para simularVotosConcurrentes. Dejar ambos vacios desactiva el doPost.
-  TOKEN: '',
-  WEBAPP_URL: '',
+  // Solo para simularVotosConcurrentes.
+  // VACIAR TOKEN ANTES DEL EVENTO: con el token vacio el doPost rechaza todo.
+  TOKEN: 'vx7k2mq9true',
+  WEBAPP_URL: 'https://script.google.com/a/macros/bbva.com/s/AKfycbwDXSrDjm81Ax7I08cSEaashM4TBSzLiQBjAhd0dcWnE0rjZPvMl96-6aecumidjVC6AQ/exec',
   LOTE: 25
 };
 
@@ -55,6 +56,7 @@ var LOADTEST = {
 function simularVotos(n) {
   n = n || 100;
 
+  var corrida = idDeCorrida_();
   var votos = votosDePrueba_();
   var tiempos = [];
   var ok = 0;
@@ -70,7 +72,7 @@ function simularVotos(n) {
     }
 
     var t0 = Date.now();
-    var res = registrarVoto(emailDePrueba_(i), votos, LOADTEST.PAIS_VOTANTE);
+    var res = registrarVoto(emailDePrueba_(corrida, i), votos, LOADTEST.PAIS_VOTANTE);
     tiempos.push(Date.now() - t0);
 
     if (res && res.ok) {
@@ -107,6 +109,7 @@ function simularVotosConcurrentes(n) {
     return { ok: false, msg: 'Configura LOADTEST.WEBAPP_URL con la URL /exec del web app.' };
   }
 
+  var corrida = idDeCorrida_();
   var token = ScriptApp.getOAuthToken();
   var votosJson = JSON.stringify(votosDePrueba_());
   var tiempos = [];
@@ -132,7 +135,7 @@ function simularVotosConcurrentes(n) {
         headers: { 'Authorization': 'Bearer ' + token },
         payload: {
           token: LOADTEST.TOKEN,
-          email: emailDePrueba_(i),
+          email: emailDePrueba_(corrida, i),
           votos: votosJson,
           paisVotante: LOADTEST.PAIS_VOTANTE
         },
@@ -240,12 +243,23 @@ function limpiarVotosDePrueba() {
   var emails = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues();
   var borrados = 0;
 
-  // De abajo hacia arriba: borrar de arriba corre los indices de las de abajo.
-  for (var i = emails.length - 1; i >= 0; i--) {
-    var e = emails[i][0] ? emails[i][0].toString().toLowerCase() : '';
-    if (e.indexOf(LOADTEST.PREFIJO) === 0) {
-      sheet.deleteRow(i + 2);
-      borrados++;
+  // De abajo hacia arriba, borrando de a bloques contiguos: con varias corridas
+  // acumuladas, una llamada por fila tarda una eternidad.
+  var finBloque = -1;
+  for (var i = emails.length - 1; i >= -1; i--) {
+    var esPrueba = false;
+    if (i >= 0) {
+      var e = emails[i][0] ? emails[i][0].toString().toLowerCase() : '';
+      esPrueba = e.indexOf(LOADTEST.PREFIJO) === 0;
+    }
+
+    if (esPrueba) {
+      if (finBloque === -1) finBloque = i;
+    } else if (finBloque !== -1) {
+      var cantidad = finBloque - i;
+      sheet.deleteRows(i + 3, cantidad);
+      borrados += cantidad;
+      finBloque = -1;
     }
   }
 
@@ -260,8 +274,17 @@ function limpiarVotosDePrueba() {
 // AUXILIARES
 // =============================================
 
-function emailDePrueba_(i) {
-  return LOADTEST.PREFIJO + ('0000' + i).slice(-4) + '@' + LOADTEST.DOMINIO;
+/**
+ * Cada corrida usa su propio identificador, asi dos pruebas seguidas no
+ * reutilizan los mismos emails. Si los reutilizaran, la segunda chocaria con
+ * el control de duplicados y mediria el rechazo en vez de la escritura.
+ */
+function idDeCorrida_() {
+  return Date.now().toString(36).slice(-5);
+}
+
+function emailDePrueba_(corrida, i) {
+  return LOADTEST.PREFIJO + corrida + '-' + ('0000' + i).slice(-4) + '@' + LOADTEST.DOMINIO;
 }
 
 /**
