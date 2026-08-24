@@ -27,16 +27,18 @@
  */
 
 const CONFIG = {
-  ADMIN_PASSWORD: 'gvarguru26',
+  ADMIN_PASSWORD: 'vinci2609',
   PESO_PONDERADO: 0.80,
   PESO_REGULAR: 0.20,
   CACHE_EMAILS_VOTARON: 300,
   CACHE_RESULTADOS: 15,
+  // El panel publico lo miran todos a la vez: conviene una ventana amplia,
+  // asi el recalculo ocurre como mucho una vez cada este intervalo.
+  CACHE_RESULTADOS_PUBLICOS: 30,
   CACHE_PONDERADOS: 1500,
   CACHE_IMAGENES: 1500,
   SLIDES_ID: '1Mkj7SD3SOSkDjyAjGjIIJob-TqvHu9rrrAAjsBvGNXI',
-  CARPETA_IMAGENES: 'VINCI Expedition - Imagenes',
-
+  CARPETA_IMAGENES: 'VINCI Expedition - Imagenes'
 };
 
 /**
@@ -488,6 +490,51 @@ function obtenerResultadosAdmin(password) {
     try { return JSON.parse(cached); } catch(e) {}
   }
 
+  var resultado = calcularResultados_();
+  try { cache.put('resultados', JSON.stringify(resultado), CONFIG.CACHE_RESULTADOS); } catch(e) {}
+  return resultado;
+}
+
+/**
+ * Version publica para el panel en vivo: el orden de cada categoria y una
+ * barra relativa al puntero, sin conteos ni scores ni quien voto que.
+ *
+ * Tiene su propio cache y, a proposito, NO se invalida al votar: lo miran
+ * todos a la vez, y recalcular en cada voto haria releer la hoja entera una
+ * y otra vez. Se refresca cuando vence el TTL.
+ */
+function obtenerResultadosPublicos() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('resultados_pub');
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
+  var base = calcularResultados_();
+
+  var publico = {
+    ok: true,
+    hayVotos: base.stats.total > 0,
+    categorias: base.categorias.map(function(cat) {
+      var lider = cat.ranking.length ? cat.ranking[0].scoreTotal : 0;
+      return {
+        nombre: cat.nombre,
+        ranking: cat.ranking.map(function(r, i) {
+          return {
+            pais: r.pais,
+            posicion: i + 1,
+            porcentaje: lider > 0 ? Math.round(r.scoreTotal / lider * 100) : 0
+          };
+        })
+      };
+    })
+  };
+
+  guardarEnCache_('resultados_pub', publico, CONFIG.CACHE_RESULTADOS_PUBLICOS);
+  return publico;
+}
+
+function calcularResultados_() {
   // Sin lock en la escritura pueden colarse filas duplicadas del mismo email:
   // vale la primera fila, el resto se descarta al contar.
   var vistos = {};
@@ -580,7 +627,6 @@ function obtenerResultadosAdmin(password) {
     actualizado: new Date().toISOString()
   };
 
-  try { cache.put('resultados', JSON.stringify(resultado), CONFIG.CACHE_RESULTADOS); } catch(e) {}
   return resultado;
 }
 

@@ -265,13 +265,13 @@
       z-index: 1;
       filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2));
     }
-    .card-pais-imagen .card-img {
-      position: absolute;
-      top: 0; left: 0;
+    /* La lamina se muestra a su proporcion real: entera, sin recorte y sin
+       nada detras, sea 16:9 o 4:3. Como todas las laminas del mismo deck
+       comparten proporcion, las tarjetas quedan parejas igual. */
+    .card-img-full {
+      display: block;
       width: 100%;
-      height: 100%;
-      object-fit: contain;
-      z-index: 1;
+      height: auto;
     }
 
     .card-pais-imagen .bandera-grande {
@@ -353,6 +353,62 @@
       font-size: 15px;
     }
     .modal-resumen li:last-child { border-bottom: none; }
+
+    .vivo-categoria {
+      margin-bottom: 28px;
+    }
+    .vivo-categoria h3 {
+      font-size: 17px;
+      color: var(--bbva-blue);
+      border-bottom: 2px solid var(--bbva-light-gray);
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+    .vivo-fila {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .vivo-pos {
+      flex: none;
+      width: 22px;
+      font-weight: 700;
+      color: var(--bbva-gray);
+      font-size: 14px;
+    }
+    .vivo-pais {
+      flex: none;
+      width: 108px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .vivo-barra {
+      flex: 1;
+      height: 14px;
+      background: var(--bbva-light-gray);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+    .vivo-relleno {
+      height: 100%;
+      border-radius: 7px;
+      background: linear-gradient(90deg, var(--bbva-blue), var(--bbva-light));
+      transition: width 0.6s ease;
+    }
+    .vivo-nota {
+      text-align: center;
+      font-size: 12px;
+      color: var(--bbva-gray);
+      margin-top: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .vivo-pais { width: 84px; font-size: 13px; }
+    }
 
     .acceso-card {
       text-align: center;
@@ -845,7 +901,22 @@
     <h2>Gracias por votar!</h2>
     <p>Tus votos fueron registrados exitosamente.</p>
     <div class="voto-info" id="confirmVotos"></div>
-    <p style="font-size:13px;color:var(--bbva-gray);margin-top:16px;">Los resultados se anunciaran en VINCI Expedition.</p>
+    <button class="btn btn-primary btn-block" style="margin-top:20px;" onclick="mostrarResultadosVivo()">Ver resultados en vivo</button>
+    <p style="font-size:13px;color:var(--bbva-gray);margin-top:16px;">Los resultados finales se anunciaran en VINCI Expedition.</p>
+  </div>
+</div>
+
+<!-- ============ VISTA: RESULTADOS EN VIVO ============ -->
+<div class="view" id="vistaResultadosVivo">
+  <div class="container">
+    <div class="votacion-titulo">
+      <h2>Resultados en vivo</h2>
+    </div>
+    <p class="votacion-instruccion">Como va la votacion en cada categoria. Se actualiza solo.</p>
+
+    <div id="vivoContenido"></div>
+
+    <p class="vivo-nota" id="vivoEstado"></p>
   </div>
 </div>
 
@@ -1010,7 +1081,8 @@ var estado = {
   refreshInterval: null,
   imagenes: {},
   seleccion: {},
-  categoriasVotables: []
+  categoriasVotables: [],
+  vivoTimer: null
 };
 
 // =============================================
@@ -1173,18 +1245,13 @@ function crearCardPais(pais, categoriaId) {
   card.onclick = function() { seleccionarPais(this); };
 
   var imgUrl = estado.imagenes[pais];
-  var imagenHtml = imgUrl
-    ? '<img class="card-img" src="' + escHtml(imgUrl) + '" alt="' + escHtml(pais) + '" loading="lazy">'
-    : banderaHtml(pais, 'bandera-grande');
-
-  var fondo = imgUrl
-    ? ''
-    : ' style="background: linear-gradient(135deg, ' + info.color1 + ', ' + info.color2 + ');"';
+  var medio = imgUrl
+    ? '<img class="card-img-full" src="' + escHtml(imgUrl) + '" alt="' + escHtml(pais) + '" loading="lazy">'
+    : '<div class="card-pais-imagen" style="background: linear-gradient(135deg, ' +
+        info.color1 + ', ' + info.color2 + ');">' + banderaHtml(pais, 'bandera-grande') + '</div>';
 
   card.innerHTML =
-    '<div class="card-pais-imagen"' + fondo + '>' +
-      imagenHtml +
-    '</div>' +
+    medio +
     '<div class="card-pais-body">' +
       '<div class="card-pais-nombre">' + banderaHtml(pais, 'bandera') + escHtml(pais) + '</div>' +
     '</div>';
@@ -1301,6 +1368,97 @@ function confirmarVoto() {
       alert('Error al registrar el voto. Por favor reintenta.');
     })
     .registrarVoto(estado.email, estado.seleccion, estado.pais);
+}
+
+// =============================================
+// RESULTADOS EN VIVO (publico, sin detalle)
+// =============================================
+
+// Cada telefono que deja este panel abierto es una ejecucion de Apps Script
+// por refresco. Con mucha gente mirando, el intervalo importa mas que en
+// cualquier otra pantalla: se refresca lento, con desfasaje aleatorio para
+// que no consulten todos en el mismo instante, y se frena cuando la pantalla
+// no esta a la vista.
+var VIVO_INTERVALO_MS = 45000;
+var VIVO_DESFASAJE_MS = 15000;
+
+function mostrarResultadosVivo() {
+  mostrarVista('vistaResultadosVivo');
+  cargarResultadosVivo();
+  programarProximoVivo();
+
+  document.addEventListener('visibilitychange', manejarVisibilidadVivo);
+}
+
+function manejarVisibilidadVivo() {
+  var visible = !document.hidden;
+  var enPantalla = document.getElementById('vistaResultadosVivo').classList.contains('active');
+
+  if (visible && enPantalla) {
+    cargarResultadosVivo();
+    programarProximoVivo();
+  } else {
+    detenerVivo();
+  }
+}
+
+function detenerVivo() {
+  if (estado.vivoTimer) {
+    clearTimeout(estado.vivoTimer);
+    estado.vivoTimer = null;
+  }
+}
+
+function programarProximoVivo() {
+  detenerVivo();
+  var espera = VIVO_INTERVALO_MS + Math.floor(Math.random() * VIVO_DESFASAJE_MS);
+  estado.vivoTimer = setTimeout(function() {
+    if (document.hidden) { detenerVivo(); return; }
+    cargarResultadosVivo();
+    programarProximoVivo();
+  }, espera);
+}
+
+function cargarResultadosVivo() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.ok) return;
+      renderizarResultadosVivo(res);
+    })
+    .withFailureHandler(function() {
+      document.getElementById('vivoEstado').textContent =
+        'No se pudo actualizar. Reintentando en un momento.';
+    })
+    .obtenerResultadosPublicos();
+}
+
+function renderizarResultadosVivo(res) {
+  var contenedor = document.getElementById('vivoContenido');
+
+  if (!res.hayVotos) {
+    contenedor.innerHTML =
+      '<p style="text-align:center;color:var(--bbva-gray);padding:32px;">' +
+      'Todavia no hay votos registrados.</p>';
+    document.getElementById('vivoEstado').textContent = '';
+    return;
+  }
+
+  contenedor.innerHTML = res.categorias.map(function(cat) {
+    var filas = cat.ranking.map(function(r) {
+      return '<div class="vivo-fila">' +
+          '<span class="vivo-pos">' + r.posicion + '</span>' +
+          '<span class="vivo-pais">' + banderaHtml(r.pais, 'bandera') + escHtml(r.pais) + '</span>' +
+          '<span class="vivo-barra"><span class="vivo-relleno" style="width:' + r.porcentaje + '%;"></span></span>' +
+        '</div>';
+    }).join('');
+
+    return '<div class="vivo-categoria">' +
+        '<h3>' + escHtml(cat.nombre) + '</h3>' + filas +
+      '</div>';
+  }).join('');
+
+  document.getElementById('vivoEstado').textContent =
+    'Actualizado ' + new Date().toLocaleTimeString();
 }
 
 // =============================================
