@@ -48,32 +48,30 @@ const CATEGORIAS = [
     id: 'mejora_continua',
     nombre: 'Mejora Continua',
     columna: 'VotoMejoraContinua',
-    paises: ['Argentina', 'CIB', 'Peru']
+    paises: ['Argentina', 'CIB', 'Mexico', 'Venezuela']
   },
   {
     id: 'ia_modelos',
     nombre: 'IA / Modelos',
     columna: 'VotoIAModelos',
-    paises: ['Colombia', 'Holding', 'Venezuela']
+    paises: ['Colombia', 'Holding', 'Peru']
   },
   {
     id: 'proyecto_sda',
     nombre: 'Proyecto SDA',
     columna: 'VotoProyectoSDA',
-    paises: ['Chile', 'Espana', 'Uruguay']
+    paises: ['Espana', 'Uruguay']
   }
 ];
 
 const PAISES = [
   'Argentina',
-  'Chile',
   'CIB',
   'Colombia',
   'Espana',
   'Holding',
   'Mexico',
   'Peru',
-  'Turquia',
   'Uruguay',
   'Venezuela'
 ];
