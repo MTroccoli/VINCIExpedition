@@ -60,7 +60,7 @@ const CATEGORIAS = [
     id: 'proyecto_sda',
     nombre: 'Proyecto SDA',
     columna: 'VotoProyectoSDA',
-    paises: ['Espana', 'Uruguay']
+    paises: ['Chile', 'Espana', 'Uruguay']
   }
 ];
 
