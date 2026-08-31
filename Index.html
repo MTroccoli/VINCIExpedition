@@ -380,9 +380,9 @@
 
 <script>
 var CATEGORIAS = [
-  { id: 'mejora_continua', nombre: 'Mejora Continua', paises: ['Argentina', 'CIB', 'Peru'] },
-  { id: 'ia_modelos',      nombre: 'IA / Modelos',    paises: ['Colombia', 'Holding', 'Venezuela'] },
-  { id: 'proyecto_sda',    nombre: 'Proyecto SDA',    paises: ['Espana', 'Uruguay'] }
+  { id: 'mejora_continua', nombre: 'Mejora Continua', paises: ['Argentina', 'CIB', 'Mexico', 'Venezuela'] },
+  { id: 'ia_modelos',      nombre: 'IA / Modelos',    paises: ['Colombia', 'Holding', 'Peru'] },
+  { id: 'proyecto_sda',    nombre: 'Proyecto SDA',    paises: ['Chile', 'Espana', 'Uruguay'] }
 ];
 
 var EMAIL_INICIAL = <?!= emailJson ?>;
@@ -468,9 +468,9 @@ function cargarPaisesVotacion() {
   estado.categoriasVotables = [];
 
   CATEGORIAS.forEach(function(cat) {
-    // Nadie vota a su propio pais. Si eso deja una categoria sin opciones,
-    // no se muestra y tampoco se le exige elegir ahi.
-    var paises = cat.paises.filter(function(p) { return p !== estado.pais; });
+    var paises = estado.esPonderado
+      ? cat.paises.slice()
+      : cat.paises.filter(function(p) { return p !== estado.pais; });
     if (!paises.length) return;
 
     estado.categoriasVotables.push(cat);

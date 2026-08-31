@@ -272,6 +272,57 @@
       margin-left: 8px;
     }
 
+    .admin-list-item .item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      background: var(--bbva-white);
+      border-radius: 12px;
+      padding: 32px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-box h3 {
+      color: var(--bbva-blue);
+      margin-bottom: 20px;
+    }
+    .modal-box .form-group { margin-bottom: 12px; }
+    .modal-box .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+      color: var(--bbva-dark);
+    }
+    .modal-box input,
+    .modal-box select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--bbva-light-gray);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
 
     .acceso-card {
       text-align: center;
@@ -358,8 +409,8 @@
       <div class="stats-grid" id="statsGrid"></div>
 
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(90deg,var(--bbva-blue),var(--bbva-medium));"></div> Ponderado (80%)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--bbva-aqua);"></div> Regular (20%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(90deg,var(--bbva-blue),var(--bbva-medium));"></div> Ponderado (60%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--bbva-aqua);"></div> Regular (40%)</div>
       </div>
 
       <div id="rankingCategorias"></div>
@@ -470,12 +521,14 @@ var estado = {
 };
 
 (function init() {
-  var selPond = document.getElementById('pondPais');
-  Object.keys(PAISES_INFO).forEach(function(p) {
-    var opt = document.createElement('option');
-    opt.value = p;
-    opt.textContent = p;
-    selPond.appendChild(opt);
+  ['pondPais', 'editPondPais'].forEach(function(id) {
+    var sel = document.getElementById(id);
+    Object.keys(PAISES_INFO).forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    });
   });
 })();
 
@@ -598,7 +651,7 @@ function cargarDashboard() {
 }
 
 // Cada categoria se escala contra su propio maximo: los denominadores del
-// 80/20 son distintos en cada una, asi que comparar barras entre categorias
+// 60/40 son distintos en cada una, asi que comparar barras entre categorias
 // no diria nada.
 function renderizarCategoriaRanking(cat) {
   var maxScore = Math.max.apply(null, cat.ranking.map(function(r) {
@@ -719,13 +772,20 @@ function cargarListaPonderadaAdmin() {
       if (!res.ok) return;
       var html = '';
       res.lista.forEach(function(u) {
+        var emailEsc = escHtml(u.Email).replace(/'/g, "\\'");
+        var nombreEsc = escHtml(u.Nombre || '').replace(/'/g, "\\'");
+        var paisEsc = escHtml(u.Pais || '').replace(/'/g, "\\'");
+        var cargoEsc = escHtml(u.Cargo || '').replace(/'/g, "\\'");
         html +=
           '<div class="admin-list-item">' +
             '<div class="item-info">' +
               '<div class="item-email">' + escHtml(u.Email) + '</div>' +
               '<div class="item-meta">' + escHtml(u.Nombre || '') + (u.Pais ? ' — ' + escHtml(u.Pais) : '') + (u.Cargo ? ' — ' + escHtml(u.Cargo) : '') + '</div>' +
             '</div>' +
-            '<button class="btn btn-danger btn-sm" onclick="eliminarPonderado(\'' + escHtml(u.Email).replace(/'/g, "\\'") + '\')">Eliminar</button>' +
+            '<div class="item-actions">' +
+              '<button class="btn btn-secondary btn-sm" onclick="abrirModalEditar(\'' + emailEsc + '\',\'' + nombreEsc + '\',\'' + paisEsc + '\',\'' + cargoEsc + '\')">Editar</button>' +
+              '<button class="btn btn-danger btn-sm" onclick="eliminarPonderado(\'' + emailEsc + '\')">Eliminar</button>' +
+            '</div>' +
           '</div>';
       });
       document.getElementById('listaPondAdmin').innerHTML = html || '<p style="color:var(--bbva-gray);text-align:center;">No hay usuarios en la lista.</p>';
