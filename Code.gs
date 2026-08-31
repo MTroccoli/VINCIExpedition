@@ -444,12 +444,12 @@ function validarUsuario(email, pais) {
  * Devuelve las categorias con los paises que este votante puede elegir.
  * Se saca su propio pais, y si una categoria queda vacia no se ofrece.
  */
-function obtenerCategoriasParaVotar(paisUsuario) {
+function obtenerCategoriasParaVotar(paisUsuario, esPonderado) {
   return CATEGORIAS.map(function(c) {
     return {
       id: c.id,
       nombre: c.nombre,
-      paises: c.paises.filter(function(p) { return p !== paisUsuario; })
+      paises: esPonderado ? c.paises.slice() : c.paises.filter(function(p) { return p !== paisUsuario; })
     };
   }).filter(function(c) {
     return c.paises.length > 0;
@@ -499,7 +499,8 @@ function registrarVoto(email, votos, paisVotante) {
     return { ok: false, msg: 'Pais no valido.' };
   }
 
-  var categorias = obtenerCategoriasParaVotar(paisVotante);
+  var esPond = obtenerSetPonderados_().indexOf(email) !== -1;
+  var categorias = obtenerCategoriasParaVotar(paisVotante, esPond);
   var elegidos = {};
 
   for (var i = 0; i < categorias.length; i++) {
@@ -527,9 +528,6 @@ function registrarVoto(email, votos, paisVotante) {
       msg: 'Ya registraste tu voto anteriormente.'
     };
   }
-
-  // La lista de ponderados esta cacheada, asi que esto no toca la hoja.
-  var esPond = obtenerSetPonderados_().indexOf(email) !== -1;
 
   // La fecha va como texto: el cuerpo del pedido es JSON y no admite un Date.
   // Con USER_ENTERED, Sheets la vuelve a interpretar como fecha en la celda.

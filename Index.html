@@ -468,9 +468,9 @@ function cargarPaisesVotacion() {
   estado.categoriasVotables = [];
 
   CATEGORIAS.forEach(function(cat) {
-    // Nadie vota a su propio pais. Si eso deja una categoria sin opciones,
-    // no se muestra y tampoco se le exige elegir ahi.
-    var paises = cat.paises.filter(function(p) { return p !== estado.pais; });
+    var paises = estado.esPonderado
+      ? cat.paises.slice()
+      : cat.paises.filter(function(p) { return p !== estado.pais; });
     if (!paises.length) return;
 
     estado.categoriasVotables.push(cat);
