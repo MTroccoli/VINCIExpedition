@@ -1,17 +1,17 @@
 /**
- * VINCI Expedition - Sistema de Votacion
+ * VINCI Expedition - Sistema de Votación
  * Septiembre 2026
  *
- * INSTRUCCIONES DE CONFIGURACION:
+ * INSTRUCCIONES DE CONFIGURACIÓN:
  *
- * OPCION A - Manual:
+ * OPCIÓN A - Manual:
  * 1. Crear un nuevo proyecto en Google Apps Script (script.google.com)
  * 2. Copiar este archivo como Code.gs
  * 3. Copiar Index.html como archivo HTML en el proyecto
- * 4. Ejecutar la funcion inicializarSistema() UNA VEZ desde el editor
- * 5. Desplegar > Nueva implementacion > Aplicacion web
+ * 4. Ejecutar la función inicializarSistema() UNA VEZ desde el editor
+ * 5. Desplegar > Nueva implementación > Aplicación web
  *
- * OPCION B - Con clasp (recomendada):
+ * OPCIÓN B - Con clasp (recomendada):
  * 1. npm install -g @google/clasp
  * 2. clasp login
  * 3. clasp create --type webapp --title "VINCI Expedition"
@@ -22,7 +22,7 @@
  *
  * DESPLIEGUE:
  * - Ejecutar como: Tu cuenta
- * - Acceso: "Cualquier persona de tu organizacion" (auto-detecta email)
+ * - Acceso: "Cualquier persona de tu organización" (auto-detecta email)
  *           O "Cualquier persona" (requiere login manual)
  */
 
@@ -48,19 +48,19 @@ const CATEGORIAS = [
     id: 'mejora_continua',
     nombre: 'Mejora Continua',
     columna: 'VotoMejoraContinua',
-    paises: ['Argentina', 'CIB', 'Peru']
+    paises: ['Argentina', 'CIB', 'Mexico', 'Venezuela']
   },
   {
     id: 'ia_modelos',
     nombre: 'IA / Modelos',
     columna: 'VotoIAModelos',
-    paises: ['Colombia', 'Holding', 'Venezuela']
+    paises: ['Colombia', 'Holding', 'Peru']
   },
   {
     id: 'proyecto_sda',
     nombre: 'Proyecto SDA',
     columna: 'VotoProyectoSDA',
-    paises: ['Espana', 'Uruguay']
+    paises: ['Chile', 'Espana', 'Uruguay']
   }
 ];
 
@@ -73,7 +73,6 @@ const PAISES = [
   'Holding',
   'Mexico',
   'Peru',
-  'Turquia',
   'Uruguay',
   'Venezuela'
 ];
@@ -172,7 +171,7 @@ function inicializarSistema() {
     var sp = ss.insertSheet(HOJAS.LISTA_PONDERADA);
     sp.appendRow(['Email', 'Nombre', 'Pais', 'Cargo']);
     sp.getRange('A1:D1').setFontWeight('bold');
-    sp.appendRow(['director.innovacion@bbva.com', 'Ejemplo Director', 'Espana', 'Director de Innovacion']);
+    sp.appendRow(['director.innovacion@bbva.com', 'Ejemplo Director', 'Espana', 'Director de Innovación']);
   }
 
   try {
@@ -220,7 +219,7 @@ function obtenerHoja_() {
   if (id) {
     try { return SpreadsheetApp.openById(id); } catch(e) {}
   }
-  var ss = SpreadsheetApp.create('VINCI Expedition - Votacion');
+  var ss = SpreadsheetApp.create('VINCI Expedition - Votación');
   props.setProperty('SS_ID', ss.getId());
   return ss;
 }
@@ -263,7 +262,7 @@ function agregarFilaVotos_(fila) {
 function agregarFilaVotosRespaldo_(fila) {
   var sheet = obtenerHoja_().getSheetByName(HOJAS.VOTOS);
   if (!sheet) {
-    return { ok: false, msg: 'No se encontro la hoja de votos. Ejecuta inicializarSistema().' };
+    return { ok: false, msg: 'No se encontró la hoja de votos. Ejecuta inicializarSistema().' };
   }
 
   var lock = LockService.getScriptLock();
@@ -420,10 +419,10 @@ function obtenerUrlWebApp() {
 function validarUsuario(email, pais) {
   email = email.toLowerCase().trim();
   if (!email || email.indexOf('@') === -1) {
-    return { ok: false, msg: 'Ingresa un email valido.' };
+    return { ok: false, msg: 'Ingresa un email válido.' };
   }
   if (PAISES.indexOf(pais) === -1) {
-    return { ok: false, msg: 'Selecciona un pais valido.' };
+    return { ok: false, msg: 'Selecciona un país válido.' };
   }
 
   var votaron = obtenerEmailsVotaron_();
@@ -494,10 +493,10 @@ function registrarVoto(email, votos, paisVotante) {
   votos = votos || {};
 
   if (!email || email.indexOf('@') === -1) {
-    return { ok: false, msg: 'Email invalido.' };
+    return { ok: false, msg: 'Email inválido.' };
   }
   if (PAISES.indexOf(paisVotante) === -1) {
-    return { ok: false, msg: 'Pais no valido.' };
+    return { ok: false, msg: 'País no válido.' };
   }
 
   var categorias = obtenerCategoriasParaVotar(paisVotante);
@@ -508,10 +507,10 @@ function registrarVoto(email, votos, paisVotante) {
     var elegido = votos[cat.id];
 
     if (!elegido) {
-      return { ok: false, msg: 'Falta elegir un pais en ' + cat.nombre + '.' };
+      return { ok: false, msg: 'Falta elegir un país en ' + cat.nombre + '.' };
     }
     if (cat.paises.indexOf(elegido) === -1) {
-      return { ok: false, msg: 'La opcion elegida en ' + cat.nombre + ' no es valida.' };
+      return { ok: false, msg: 'La opción elegida en ' + cat.nombre + ' no es válida.' };
     }
     elegidos[cat.id] = elegido;
   }
@@ -550,7 +549,7 @@ function registrarVoto(email, votos, paisVotante) {
 
   return {
     ok: true,
-    msg: 'Votos registrados exitosamente!',
+    msg: '¡Votos registrados exitosamente!',
     votos: elegidos
   };
 }
@@ -683,7 +682,7 @@ function agregarUsuarioPonderado(password, datos) {
 
   var ponderados = obtenerSetPonderados_();
   if (ponderados.indexOf(datos.email.toLowerCase()) !== -1) {
-    return { ok: false, msg: 'El usuario ya esta en la lista.' };
+    return { ok: false, msg: 'El usuario ya está en la lista.' };
   }
 
   obtenerHoja_().getSheetByName(HOJAS.LISTA_PONDERADA).appendRow([

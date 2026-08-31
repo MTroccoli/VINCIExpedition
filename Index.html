@@ -285,7 +285,7 @@
 <!-- HEADER -->
 <div class="header">
   <div class="header-logo">VINCI EXPEDITION</div>
-  <div class="header-sub">Votacion Global - Septiembre 2026</div>
+  <div class="header-sub">Votación Global - Septiembre 2026</div>
   <div class="header-user" id="headerUser">
     <strong id="headerEmail"></strong>
     <span id="headerPais"></span>
@@ -304,7 +304,7 @@
     <h3>Confirmar tus votos</h3>
     <p>Vas a votar por:</p>
     <ul class="modal-resumen" id="modalResumenVotos"></ul>
-    <p>Esta accion no se puede deshacer.</p>
+    <p>Esta acción no se puede deshacer.</p>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarVoto()">Confirmar voto</button>
@@ -316,14 +316,14 @@
 <div class="view active" id="vistaRegistro">
   <div class="registro-card">
     <h2>Bienvenido a VINCI Expedition</h2>
-    <p>Selecciona tu pais e ingresa tu email corporativo para participar en la votacion.</p>
+    <p>Selecciona tu país e ingresa tu email corporativo para participar en la votación.</p>
 
     <div class="error-msg" id="errorRegistro"></div>
 
     <div class="form-group">
-      <label for="selectPais">Tu pais</label>
+      <label for="selectPais">Tu país</label>
       <select id="selectPais">
-        <option value="">Selecciona un pais...</option>
+        <option value="">Selecciona un país...</option>
       </select>
     </div>
 
@@ -350,9 +350,9 @@
 <div class="view" id="vistaVotacion">
   <div class="container">
     <div class="votacion-titulo">
-      <h2>Elegi un pais por categoria</h2>
+      <h2>Elegí un país por categoría</h2>
     </div>
-    <p class="votacion-instruccion">Cada pais compite en una sola categoria. Elegi uno en cada una. No podes votar por tu propio pais.</p>
+    <p class="votacion-instruccion">Cada país compite en una sola categoría. Elegí uno en cada una. No podés votar por tu propio país.</p>
 
     <div id="categoriasVotacion"></div>
 
@@ -367,10 +367,10 @@
 <div class="view" id="vistaConfirmacion">
   <div class="confirmacion-card">
     <div class="check-icon">&#10003;</div>
-    <h2>Gracias por votar!</h2>
+    <h2>¡Gracias por votar!</h2>
     <p>Tus votos fueron registrados exitosamente.</p>
     <div class="voto-info" id="confirmVotos"></div>
-    <p style="font-size:13px;color:var(--bbva-gray);margin-top:16px;">Los resultados finales se anunciaran en VINCI Expedition.</p>
+    <p style="font-size:13px;color:var(--bbva-gray);margin-top:16px;">Los resultados finales se anunciarán en VINCI Expedition.</p>
   </div>
 </div>
 
@@ -427,7 +427,7 @@ function ingresar() {
     : document.getElementById('inputEmail').value.trim();
   ocultarError('errorRegistro');
 
-  if (!pais) { mostrarError('errorRegistro', 'Selecciona tu pais.'); return; }
+  if (!pais) { mostrarError('errorRegistro', 'Selecciona tu país.'); return; }
   if (!email) { mostrarError('errorRegistro', 'Ingresa tu email corporativo.'); return; }
 
   mostrarLoading(true);
@@ -453,7 +453,7 @@ function ingresar() {
     })
     .withFailureHandler(function(err) {
       mostrarLoading(false);
-      mostrarError('errorRegistro', 'Error de conexion. Reintenta en unos segundos.');
+      mostrarError('errorRegistro', 'Error de conexión. Reintenta en unos segundos.');
     })
     .validarUsuario(email, pais);
 }
@@ -554,7 +554,7 @@ function actualizarResumenSeleccion() {
     }).join(', ');
     boton.disabled = true;
   } else {
-    resumen.textContent = 'Listo, elegiste en las ' + estado.categoriasVotables.length + ' categorias.';
+    resumen.textContent = 'Listo, elegiste en las ' + estado.categoriasVotables.length + ' categorías.';
     boton.disabled = false;
   }
 }
@@ -587,7 +587,7 @@ function confirmarVoto() {
     if (respondido) return;
     respondido = true;
     mostrarLoading(false);
-    alert('Hay mucha demanda y no pudimos confirmar tu voto. Volve a intentar en unos segundos.');
+    alert('Hay mucha demanda y no pudimos confirmar tu voto. Volvé a intentar en unos segundos.');
   }, 45000);
 
   function terminar() {

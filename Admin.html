@@ -310,7 +310,7 @@
 <!-- HEADER -->
 <div class="header">
   <div class="header-logo">VINCI EXPEDITION</div>
-  <div class="header-sub">Votacion Global - Septiembre 2026</div>
+  <div class="header-sub">Votación Global - Septiembre 2026</div>
   <div class="header-user" id="headerUser">
     <strong id="headerEmail"></strong>
     <span id="headerPais"></span>
@@ -329,8 +329,8 @@
     <h2>Panel Admin</h2>
     <div class="error-msg" id="errorAdmin"></div>
     <div class="form-group">
-      <label for="inputAdminPass">Contrasena de administrador</label>
-      <input type="password" id="inputAdminPass" placeholder="Ingresa la contrasena">
+      <label for="inputAdminPass">Contraseña de administrador</label>
+      <input type="password" id="inputAdminPass" placeholder="Ingresa la contraseña">
     </div>
     <button class="btn btn-primary btn-block" onclick="loginAdmin()">Acceder</button>
     <span class="link-admin" onclick="volverRegistro()" style="margin-top:16px;">Volver al inicio</span>
@@ -373,7 +373,7 @@
           <thead>
             <tr>
               <th>Email</th>
-              <th>Pais Votante</th>
+              <th>País Votante</th>
               <th>Elecciones</th>
               <th>Fecha</th>
             </tr>
@@ -381,19 +381,19 @@
           <tbody id="tbodyPonderados"></tbody>
         </table>
       </div>
-      <p id="sinVotosPond" style="text-align:center;color:var(--bbva-gray);padding:32px;display:none;">Aun no hay votos de la lista ponderada.</p>
+      <p id="sinVotosPond" style="text-align:center;color:var(--bbva-gray);padding:32px;display:none;">Aún no hay votos de la lista ponderada.</p>
     </div>
 
     <!-- TAB: Acceso / QR -->
     <div class="admin-section" id="secAcceso">
       <div class="acceso-card">
-        <h3 style="color:var(--bbva-blue);margin-bottom:8px;">Acceso desde el movil</h3>
+        <h3 style="color:var(--bbva-blue);margin-bottom:8px;">Acceso desde el móvil</h3>
         <p style="color:var(--bbva-gray);font-size:14px;margin-bottom:20px;">
-          Proyecta este QR para que la gente entre desde el telefono.
+          Proyecta este QR para que la gente entre desde el teléfono.
         </p>
         <img class="acceso-qr" id="accesoQr" alt="QR de acceso" style="display:none;">
         <p id="accesoError" style="color:var(--bbva-gray);font-size:13px;display:none;">
-          No se pudo generar el QR. Copia la direccion y generalo con la herramienta que prefieras.
+          No se pudo generar el QR. Copia la dirección y generalo con la herramienta que prefieras.
         </p>
         <a class="acceso-url" id="accesoUrl" target="_blank" rel="noopener"></a>
       </div>
@@ -408,7 +408,7 @@
           <div><label class="form-label">Nombre</label><input id="pondNombre" placeholder="Nombre completo"></div>
         </div>
         <div class="form-row">
-          <div><label class="form-label">Pais</label>
+          <div><label class="form-label">País</label>
             <select id="pondPais">
               <option value="">Selecciona...</option>
             </select>
@@ -429,6 +429,33 @@
   </div>
 </div>
 
+<!-- MODAL EDITAR PONDERADO -->
+<div class="modal-overlay" id="modalEditarPond">
+  <div class="modal-box">
+    <h3>Editar votante ponderado</h3>
+    <input type="hidden" id="editPondEmailOriginal">
+    <div class="form-group">
+      <label>Email</label>
+      <input id="editPondEmail" placeholder="usuario@bbva.com">
+    </div>
+    <div class="form-group">
+      <label>Nombre</label>
+      <input id="editPondNombre" placeholder="Nombre completo">
+    </div>
+    <div class="form-group">
+      <label>País</label>
+      <select id="editPondPais"><option value="">Selecciona...</option></select>
+    </div>
+    <div class="form-group">
+      <label>Cargo</label>
+      <input id="editPondCargo" placeholder="Cargo">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary btn-sm" onclick="cerrarModalEditar()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="guardarEdicionPonderado()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 
 <?!= incluir_('Comun') ?>
@@ -469,14 +496,14 @@ function loginAdmin() {
   var pass = document.getElementById('inputAdminPass').value;
   ocultarError('errorAdmin');
 
-  if (!pass) { mostrarError('errorAdmin', 'Ingresa la contrasena.'); return; }
+  if (!pass) { mostrarError('errorAdmin', 'Ingresa la contraseña.'); return; }
 
   mostrarLoading(true);
   google.script.run
     .withSuccessHandler(function(ok) {
       mostrarLoading(false);
       if (!ok) {
-        mostrarError('errorAdmin', 'Contrasena incorrecta.');
+        mostrarError('errorAdmin', 'Contraseña incorrecta.');
         return;
       }
       estado.adminPassword = pass;
@@ -487,7 +514,7 @@ function loginAdmin() {
     })
     .withFailureHandler(function() {
       mostrarLoading(false);
-      mostrarError('errorAdmin', 'Error de conexion.');
+      mostrarError('errorAdmin', 'Error de conexión.');
     })
     .loginAdmin(pass);
 }
@@ -520,7 +547,7 @@ function cargarAcceso() {
       var error = document.getElementById('accesoError');
 
       if (!res || !res.ok || !res.url) {
-        enlace.textContent = 'No se pudo obtener la URL. Abri el web app publicado, no la vista previa del editor.';
+        enlace.textContent = 'No se pudo obtener la URL. Abrí el web app publicado, no la vista previa del editor.';
         enlace.removeAttribute('href');
         error.style.display = 'block';
         imagen.style.display = 'none';
@@ -559,13 +586,13 @@ function cargarDashboard() {
         return;
       }
       if (!res.ok) {
-        aviso.textContent = 'La contrasena no es valida para leer resultados.';
+        aviso.textContent = 'La contraseña no es válida para leer resultados.';
         return;
       }
       renderizarDashboard(res);
     })
     .withFailureHandler(function(err) {
-      aviso.textContent = 'No se pudo cargar: ' + (err && err.message ? err.message : 'error de conexion');
+      aviso.textContent = 'No se pudo cargar: ' + (err && err.message ? err.message : 'error de conexión');
     })
     .obtenerResultadosAdmin(estado.adminPassword);
 }
@@ -614,7 +641,7 @@ function renderizarCategoriaRanking(cat) {
     '<div class="table-scroll">' +
       '<table class="ranking-table">' +
         '<thead><tr>' +
-          '<th>#</th><th>Pais</th><th>Votos Pond.</th><th>Votos Reg.</th>' +
+          '<th>#</th><th>País</th><th>Votos Pond.</th><th>Votos Reg.</th>' +
           '<th>Total</th><th>Score Pond.</th><th>Score Reg.</th><th>Score Total</th>' +
         '</tr></thead>' +
         '<tbody>' + filas + '</tbody>' +
@@ -627,7 +654,7 @@ function renderizarDashboard(res) {
     '<div class="stat-card"><div class="stat-value">' + res.stats.total + '</div><div class="stat-label">Votantes</div></div>' +
     '<div class="stat-card"><div class="stat-value">' + res.stats.ponderados + '</div><div class="stat-label">Votos ponderados</div></div>' +
     '<div class="stat-card"><div class="stat-value">' + res.stats.regulares + '</div><div class="stat-label">Votos regulares</div></div>' +
-    '<div class="stat-card"><div class="stat-value">' + res.stats.paises + '</div><div class="stat-label">Paises participantes</div></div>';
+    '<div class="stat-card"><div class="stat-value">' + res.stats.paises + '</div><div class="stat-label">Países participantes</div></div>';
 
   document.getElementById('rankingCategorias').innerHTML =
     res.categorias.map(renderizarCategoriaRanking).join('');
@@ -732,8 +759,47 @@ function adminAgregarPonderado() {
     .agregarUsuarioPonderado(estado.adminPassword, { email: email, nombre: nombre, pais: pais, cargo: cargo });
 }
 
+function abrirModalEditar(email, nombre, pais, cargo) {
+  document.getElementById('editPondEmailOriginal').value = email;
+  document.getElementById('editPondEmail').value = email;
+  document.getElementById('editPondNombre').value = nombre;
+  document.getElementById('editPondPais').value = pais;
+  document.getElementById('editPondCargo').value = cargo;
+  document.getElementById('modalEditarPond').classList.add('show');
+}
+
+function cerrarModalEditar() {
+  document.getElementById('modalEditarPond').classList.remove('show');
+}
+
+function guardarEdicionPonderado() {
+  var emailOriginal = document.getElementById('editPondEmailOriginal').value;
+  var datos = {
+    email: document.getElementById('editPondEmail').value.trim(),
+    nombre: document.getElementById('editPondNombre').value.trim(),
+    pais: document.getElementById('editPondPais').value,
+    cargo: document.getElementById('editPondCargo').value.trim()
+  };
+
+  if (!datos.email) { alert('Ingresa el email.'); return; }
+
+  mostrarLoading(true);
+  cerrarModalEditar();
+  google.script.run
+    .withSuccessHandler(function(res) {
+      mostrarLoading(false);
+      if (res.ok) {
+        cargarListaPonderadaAdmin();
+      } else {
+        alert(res.msg || 'Error al guardar.');
+      }
+    })
+    .withFailureHandler(function() { mostrarLoading(false); alert('Error de conexión.'); })
+    .editarUsuarioPonderado(estado.adminPassword, emailOriginal, datos);
+}
+
 function eliminarPonderado(email) {
-  if (!confirm('Eliminar a ' + email + ' de la lista ponderada?')) return;
+  if (!confirm('¿Eliminar a ' + email + ' de la lista ponderada?')) return;
   mostrarLoading(true);
   google.script.run
     .withSuccessHandler(function() { mostrarLoading(false); cargarListaPonderadaAdmin(); })
@@ -742,8 +808,8 @@ function eliminarPonderado(email) {
 }
 
 function confirmarReset() {
-  if (!confirm('ATENCION: Esto eliminara TODOS los votos registrados. Esta accion no se puede deshacer. Continuar?')) return;
-  if (!confirm('Confirma por segunda vez: eliminar todos los votos?')) return;
+  if (!confirm('ATENCIÓN: Esto eliminará TODOS los votos registrados. Esta acción no se puede deshacer. ¿Continuar?')) return;
+  if (!confirm('Confirma por segunda vez: ¿eliminar todos los votos?')) return;
 
   mostrarLoading(true);
   google.script.run
