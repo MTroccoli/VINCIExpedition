@@ -4,23 +4,22 @@
 // =============================================
 // DATOS DE PAISES (banderas y colores)
 // =============================================
-// iniciativa: titulo que se muestra en la tarjeta. PROVISORIO: reemplazar por
-// el titulo real de cada pais cuando esten definidos.
+// iniciativa: titulo que se muestra en la tarjeta de votación.
 // iso: codigo ISO-3166 alpha-2 para la bandera. Windows/Chrome no dibuja los
 // emoji de bandera (muestra las letras), asi que la bandera va como imagen y
 // el emoji queda solo de respaldo para las unidades sin pais (CIB, Holding).
 var PAISES_INFO = {
-  'Argentina': { iso: 'ar',  emoji: '🇦🇷', color1: '#75AADB', color2: '#FCBF49', iniciativa: 'Iniciativa pendiente de definir' },
+  'Argentina': { iso: 'ar',  emoji: '🇦🇷', color1: '#75AADB', color2: '#FCBF49', iniciativa: 'ALM Desk Dashboard' },
   'Chile':     { iso: 'cl',  emoji: '🇨🇱', color1: '#D52B1E', color2: '#0039A6', iniciativa: 'Iniciativa pendiente de definir' },
-  'CIB':       { iso: null,  emoji: '🏦', color1: '#004481', color2: '#1973B8', iniciativa: 'Iniciativa pendiente de definir' },
-  'Colombia':  { iso: 'co',  emoji: '🇨🇴', color1: '#FCD116', color2: '#003893', iniciativa: 'Iniciativa pendiente de definir' },
-  'Espana':    { iso: 'es',  emoji: '🇪🇸', color1: '#AA151B', color2: '#F1BF00', iniciativa: 'Iniciativa pendiente de definir' },
-  'Holding':   { iso: null,  emoji: '🏢', color1: '#072146', color2: '#2DCCCD', iniciativa: 'Iniciativa pendiente de definir' },
-  'Mexico':    { iso: 'mx',  emoji: '🇲🇽', color1: '#006847', color2: '#CE1126', iniciativa: 'Iniciativa pendiente de definir' },
-  'Peru':      { iso: 'pe',  emoji: '🇵🇪', color1: '#D91023', color2: '#FFFFFF', iniciativa: 'Iniciativa pendiente de definir' },
+  'CIB':       { iso: null,  emoji: '🏦', color1: '#004481', color2: '#1973B8', iniciativa: 'Dashboards Seguimiento Capital' },
+  'Colombia':  { iso: 'co',  emoji: '🇨🇴', color1: '#FCD116', color2: '#003893', iniciativa: 'IDP Finance' },
+  'Espana':    { iso: 'es',  emoji: '🇪🇸', color1: '#AA151B', color2: '#F1BF00', iniciativa: 'Portal Informacional Contable' },
+  'Holding':   { iso: null,  emoji: '🏢', color1: '#072146', color2: '#2DCCCD', iniciativa: 'SDA Navigator' },
+  'Mexico':    { iso: 'mx',  emoji: '🇲🇽', color1: '#006847', color2: '#CE1126', iniciativa: 'Modelo de IVA' },
+  'Peru':      { iso: 'pe',  emoji: '🇵🇪', color1: '#D91023', color2: '#FFFFFF', iniciativa: 'Gema para el diseño y documentación de controles' },
   'Turquia':   { iso: 'tr',  emoji: '🇹🇷', color1: '#E30A17', color2: '#FFFFFF', iniciativa: 'Iniciativa pendiente de definir' },
-  'Uruguay':   { iso: 'uy',  emoji: '🇺🇾', color1: '#001489', color2: '#FCD116', iniciativa: 'Iniciativa pendiente de definir' },
-  'Venezuela': { iso: 've',  emoji: '🇻🇪', color1: '#CF142B', color2: '#00247D', iniciativa: 'Iniciativa pendiente de definir' }
+  'Uruguay':   { iso: 'uy',  emoji: '🇺🇾', color1: '#001489', color2: '#FCD116', iniciativa: 'GOLDEN' },
+  'Venezuela': { iso: 've',  emoji: '🇻🇪', color1: '#CF142B', color2: '#00247D', iniciativa: 'Nexus BBVA Filiales' }
 };
 
 // Debe coincidir con CATEGORIAS en Code.gs. Se replica del lado del cliente
