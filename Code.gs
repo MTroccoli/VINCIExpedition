@@ -45,10 +45,10 @@ const CONFIG = {
  */
 const CATEGORIAS = [
   {
-    id: 'mejora_continua',
-    nombre: 'Mejora Continua',
-    columna: 'VotoMejoraContinua',
-    paises: ['Argentina', 'CIB', 'Mexico', 'Venezuela']
+    id: 'proyecto_sda',
+    nombre: 'Proyecto SDA',
+    columna: 'VotoProyectoSDA',
+    paises: ['Chile', 'Espana', 'Uruguay']
   },
   {
     id: 'ia_modelos',
@@ -57,10 +57,10 @@ const CATEGORIAS = [
     paises: ['Colombia', 'Holding', 'Peru']
   },
   {
-    id: 'proyecto_sda',
-    nombre: 'Proyecto SDA',
-    columna: 'VotoProyectoSDA',
-    paises: ['Chile', 'Espana', 'Uruguay']
+    id: 'mejora_continua',
+    nombre: 'Mejora Continua',
+    columna: 'VotoMejoraContinua',
+    paises: ['Argentina', 'CIB', 'Mexico', 'Venezuela']
   }
 ];
 
