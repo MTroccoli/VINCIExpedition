@@ -377,7 +377,7 @@ function invalidarCachePonderados_() {
  */
 function refrescarCaches() {
   CacheService.getScriptCache().removeAll([
-    'emails_votaron', 'ponderados', 'resultados'
+    'emails_votaron', 'ponderados', 'resultados', 'headers_votos'
   ]);
   Logger.log('Caches vaciados.');
   return { ok: true, msg: 'Caches vaciados.' };
@@ -385,7 +385,7 @@ function refrescarCaches() {
 
 function invalidarCacheVotos_() {
   var cache = CacheService.getScriptCache();
-  cache.removeAll(['emails_votaron', 'resultados']);
+  cache.removeAll(['emails_votaron', 'resultados', 'headers_votos']);
 }
 
 function invalidarCacheResultados_() {
@@ -458,23 +458,46 @@ function obtenerCategoriasParaVotar(paisUsuario, esPonderado) {
 }
 
 /**
+ * Encabezados reales de la hoja Votos, leidos y cacheados. Si la hoja fue
+ * inicializada con un orden de CATEGORIAS distinto al actual, el orden de
+ * las columnas en el archivo no cambia: hay que leerlo de la hoja.
+ */
+function obtenerEncabezadosReales_() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('headers_votos');
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
+  var sheet = obtenerHoja_().getSheetByName(HOJAS.VOTOS);
+  if (!sheet || sheet.getLastRow() < 1) return encabezadosVotos_();
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(function(h) { return h.toString(); });
+
+  guardarEnCache_('headers_votos', headers, 21600);
+  return headers;
+}
+
+/**
  * Devuelve los votos ya registrados de un email como { idCategoria: pais }.
  * Solo se llama en el camino del duplicado, que es raro, asi que la lectura
- * de hoja no pesa.
+ * de hoja no pesa. Busca las columnas por nombre, no por posicion, para
+ * no depender del orden en que se inicializaron.
  */
 function buscarVotosDe_(email) {
   var sheet = obtenerHoja_().getSheetByName(HOJAS.VOTOS);
   if (!sheet || sheet.getLastRow() <= 1) return {};
 
-  var ancho = encabezadosVotos_().length;
-  var filas = sheet.getRange(2, 1, sheet.getLastRow() - 1, ancho).getValues();
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
 
-  for (var i = 0; i < filas.length; i++) {
-    if (filas[i][1] && filas[i][1].toString().toLowerCase().trim() === email) {
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][1] && data[i][1].toString().toLowerCase().trim() === email) {
       var votos = {};
-      CATEGORIAS.forEach(function(c, j) {
-        // Las columnas de voto arrancan despues de las cuatro fijas.
-        votos[c.id] = filas[i][4 + j] || '';
+      CATEGORIAS.forEach(function(c) {
+        var col = headers.indexOf(c.columna);
+        if (col !== -1) votos[c.id] = data[i][col] || '';
       });
       return votos;
     }
@@ -533,8 +556,20 @@ function registrarVoto(email, votos, paisVotante) {
   // La fecha va como texto: el cuerpo del pedido es JSON y no admite un Date.
   // Con USER_ENTERED, Sheets la vuelve a interpretar como fecha en la celda.
   var ahora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
-  var fila = [ahora, email, paisVotante, esPond ? 'SI' : 'NO'];
-  CATEGORIAS.forEach(function(c) { fila.push(elegidos[c.id] || ''); });
+
+  // Arma un mapa columna→valor y lo ordena segun los encabezados reales de la
+  // hoja, que pueden diferir del orden actual de CATEGORIAS si la hoja se
+  // inicializo con un orden anterior.
+  var valores = {
+    'Timestamp': ahora,
+    'Email': email,
+    'PaisVotante': paisVotante,
+    'EsPonderado': esPond ? 'SI' : 'NO'
+  };
+  CATEGORIAS.forEach(function(c) { valores[c.columna] = elegidos[c.id] || ''; });
+
+  var headers = obtenerEncabezadosReales_();
+  var fila = headers.map(function(h) { return valores[h] || ''; });
 
   var escritura = agregarFilaVotos_(fila);
   if (!escritura.ok) {
