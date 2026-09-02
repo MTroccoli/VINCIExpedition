@@ -73,6 +73,7 @@ const PAISES = [
   'Holding',
   'Mexico',
   'Peru',
+  'Turquia',
   'Uruguay',
   'Venezuela'
 ];
